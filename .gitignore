@@ -12,3 +12,5 @@ data/reglementation_articles_index.json
 data/reglementation_documents.json
 data/reglementation_thesaurus.json
 *.tsbuildinfo
+data/workspace.db.json
+data/corpus-officiel.json

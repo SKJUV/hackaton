@@ -15,6 +15,7 @@ import {
   Radar,
   RotateCcw,
   Scale,
+  Sparkles,
   ShieldCheck,
   Truck,
   Users,
@@ -39,6 +40,7 @@ import {
 } from "@/components/workspace/Tabs";
 import { api, Badge } from "@/components/workspace/ui";
 import { Paywall } from "@/components/workspace/Paywall";
+import { StudioTab } from "@/components/studio/StudioTab";
 import { getMe, type Me } from "@/components/auth/client";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Snapshot } from "@/lib/workspace/service";
@@ -46,6 +48,7 @@ import type { Snapshot } from "@/lib/workspace/service";
 const TABS = [
   { id: "tableau", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "agent", label: "Agent co-fondateur", icon: Bot },
+  { id: "studio", label: "Studio co-fondateur", icon: Sparkles },
   { id: "approbations", label: "Approbations", icon: ShieldCheck },
   { id: "envoi", label: "Boîte d'envoi", icon: Inbox },
   { id: "fournisseurs", label: "Fournisseurs & devis", icon: Truck },
@@ -181,6 +184,7 @@ export default function WorkspacePage() {
         <div className={`ws-content ${tab === "agent" ? "is-agent" : ""}`}>
           {tab === "tableau" && <Dashboard {...props} />}
           {tab === "agent" && <AgentPanel snap={snap} onChange={() => void refresh()} goTo={(t) => setTab(t as TabId)} />}
+          {tab === "studio" && <StudioTab />}
           {tab === "approbations" && <Approvals {...props} />}
           {tab === "envoi" && <Outbox {...props} />}
           {tab === "fournisseurs" && <Suppliers {...props} />}

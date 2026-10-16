@@ -148,8 +148,8 @@ Le bouton ↺ du workspace réinitialise les données de démonstration.
 
 ## Intégration d'ai-cofounder-studio
 
-Le dépôt https://github.com/Noah12345578/ai-cofounder-studio était **vide** (aucun commit, aucune branche)
-lors de l'intégration (16/10/2026) : rien n'a pu être repris ni forké. Voir `docs/AI_COFOUNDER_STUDIO.md`.
+Le push de la branche `ai-cofounder` de https://github.com/Noah12345578/ai-cofounder-studio est en cours ;
+un emplacement payant est prêt (onglet « Studio co-fondateur », `/api/studio`, `lib/studio/registry.ts`). Voir `docs/AI_COFOUNDER_STUDIO.md`.
 
 ## Limites connues
 

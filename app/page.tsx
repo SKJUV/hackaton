@@ -613,7 +613,7 @@ export default function Home() {
                   <div className="composer-left-actions">
                     <VoiceInputButton
                       disabled={loading}
-                      onTranscript={(text) => setQuestion(text)}
+                      onTranscript={setQuestion}
                     />
                     <span className="composer-hint">
                       <Sparkles size={14} /> Répond avec citations précises
@@ -867,7 +867,7 @@ export default function Home() {
                 <div className="composer-left-actions">
                   <VoiceInputButton
                     disabled={loading}
-                    onTranscript={(text) => setQuestion(text)}
+                    onTranscript={setQuestion}
                   />
                   <span className="composer-hint">
                     <span className="keyboard-hint">↵</span> Entrée pour envoyer

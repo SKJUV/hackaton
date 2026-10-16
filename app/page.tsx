@@ -45,6 +45,9 @@ type Citation = {
   page: number;
   excerpt: string;
   file: string;
+  articles?: string[];
+  isRecueil?: boolean;
+  legalTitle?: string | null;
 };
 
 type Message = {
@@ -793,8 +796,19 @@ export default function Home() {
                             >
                               <span className="source-file-icon"><FileText size={16} /></span>
                               <span className="source-copy">
-                                <strong>{citation.title}</strong>
-                                <small>{citation.category} · page {citation.page}</small>
+                                <span className="source-type-label">
+                                  {citation.isRecueil ? "Extrait d’un recueil" : citation.category}
+                                </span>
+                                <strong>{citation.legalTitle ?? citation.title}</strong>
+                                {citation.isRecueil && citation.legalTitle && (
+                                  <small>Recueil source : {citation.title}</small>
+                                )}
+                                <small>
+                                  Page PDF {citation.page}
+                                  {citation.articles && citation.articles.length > 0
+                                    ? ` · Article${citation.articles.length > 1 ? "s" : ""} ${citation.articles.join(", ")}`
+                                    : ""}
+                                </small>
                               </span>
                               <ExternalLink size={14} className="source-external" />
                             </div>

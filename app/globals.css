@@ -2048,3 +2048,13 @@ select:focus-visible {
   }
 }
 
+
+/* Citations enrichies (report de main@566a87d) */
+.source-type-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}

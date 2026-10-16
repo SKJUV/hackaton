@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+.next
+*.tsbuildinfo
+scratch/
+reglementation.zip
+publications/
+reglementation/recueil de texte/
+data/ocr-page-*.png

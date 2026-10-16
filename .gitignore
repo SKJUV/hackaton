@@ -14,3 +14,6 @@ data/reglementation_thesaurus.json
 *.tsbuildinfo
 data/workspace.db.json
 data/corpus-officiel.json
+.vercel
+.env*
+!.env.example

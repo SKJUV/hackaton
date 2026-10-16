@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "index-documents": "node scripts/index-documents.mjs"
+    "index-documents": "node scripts/index-documents.mjs",
+    "ingest-corpus": "node scripts/ingest-corpus.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
     "next": "^15.2.4",
+    "nodemailer": "^10.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tesseract.js": "^7.0.0"
@@ -19,9 +23,11 @@
     "@tesseract.js-data/eng": "^1.0.0",
     "@tesseract.js-data/fra": "^1.0.0",
     "@types/node": "^22.13.10",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "postcss": "^8.5.30"

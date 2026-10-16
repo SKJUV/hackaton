@@ -71,6 +71,7 @@ const relatedLegalTerms: Record<string, string[]> = {
   ],
   donnees: ["personnelles", "vie", "privee", "collecte", "traitement"],
   consommateur: ["usager", "client", "abonne", "reclamation", "plainte"],
+  concurrence: ["concurrentielle", "entente", "dominante", "marche", "abus", "prix"],
   operateur: ["telecommunications", "communications", "electroniques", "abonne"],
   facture: ["facturation", "tarif", "paiement", "contestation"],
   recours: ["plainte", "reclamation", "conciliation", "arbitrage", "reparation"],
@@ -141,6 +142,60 @@ export function searchDocuments(
   limit = 6,
 ): SearchResult[] {
   const originalQueryTerms = terms(query);
+  const normalizedQuery = query
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr");
+  const statuteReferences = [
+    {
+      query: /\b2010\s*[/.-]?\s*013\b/,
+      source: /loi_2010-013_communications_electroniques\.pdf$/,
+    },
+    {
+      query: /\b2015\s*[/.-]?\s*0*6\b/,
+      source: /(?:loi_2015_06.*communications_electroniques|loi-n°2015-006).*\.pdf$/,
+    },
+    {
+      query: /\b2010\s*[/.-]?\s*012\b/,
+      source: /loi_2010-012_cybersecurite_cybercriminalite\.pdf$/,
+    },
+    {
+      query: /\b2010\s*[/.-]?\s*021\b/,
+      source: /loi-commerce-electronique-n-2010-021.*\.pdf$/,
+    },
+    {
+      query: /\b2011\s*[/.-]?\s*012\b/,
+      source: /loi-cadre-n°2011-012.*protection-du-consommateur\.pdf$/,
+    },
+    {
+      query: /\b98\s*[/.-]?\s*013\b/,
+      source: /loi_98_013_1407_concurrence\.pdf$/,
+    },
+    {
+      query: /\b2020\s*[/.-]?\s*004\b/,
+      source: /recueil-des-textes-du-secteur-des-postes-telecommunications-et-tic-edition-2023\.pdf$/,
+    },
+  ].filter((reference) => reference.query.test(normalizedQuery));
+  const asksAboutCyberLaw =
+    /\b(cybersecurite|cybercriminalite|informatique|interception|confidentialite|donnees personnelles|systeme informatique)\b/.test(
+      normalizedQuery,
+    );
+  const asksAboutElectronicCommerceLaw =
+    /\b(commerce electronique|boutique en ligne|commande electronique|contrat.{0,20}distance|vendeur en ligne|communication commerciale)\b/.test(
+      normalizedQuery,
+    );
+  const asksAboutConsumerLaw =
+    /\b(consommateur|consommateurs|facture|facturation|pratique commerciale|trompeuse|produit.{0,12}defaut|service.{0,18}demande|droits.{0,15}client)\b/.test(
+      normalizedQuery,
+    );
+  const asksAboutCompetitionLaw =
+    /\b(concurrence|concurrent|concurrents|position dominante|fixer les prix|pratiques anticoncurrentielles)\b/.test(
+      normalizedQuery,
+    );
+  const asksAboutTelecomLaw =
+    /\b(telecom|telecommunications|communication electronique|frequences|reseau.{0,20}public|infrastructures de communications)\b/.test(
+      normalizedQuery,
+    );
   const isBusinessQuestion = originalQueryTerms.some((term) =>
     ["veux", "veut", "creer", "lancer", "ouvrir", "importer", "developper", "business", "entreprise"].includes(term),
   );
@@ -316,8 +371,26 @@ export function searchDocuments(
           ["equipement", "equipements", "telephone", "telephones", "importer", "vendre", "vente"].includes(term),
         ) &&
         /homologation|équipements? terminaux|agrément.*équipements/i.test(chunk.text)
+          ? 12
+          : 1;
+      const matchesExplicitStatute =
+        statuteReferences.some((reference) => reference.source.test(sourcePath));
+      const statuteTopicBoost =
+        (asksAboutCyberLaw &&
+        sourcePath.endsWith("loi_2010-012_cybersecurite_cybercriminalite.pdf")) ||
+        (asksAboutElectronicCommerceLaw &&
+          sourcePath.endsWith("loi-commerce-electronique-n-2010-021-du-21-12-2010.pdf")) ||
+        (asksAboutConsumerLaw &&
+          sourcePath.endsWith(
+            "loi-cadre-n°2011-012-du-06-mai-2011-sur-la-protection-du-consommateur.pdf",
+          )) ||
+        (asksAboutCompetitionLaw &&
+          sourcePath.endsWith("loi_98_013_1407_concurrence.pdf")) ||
+        (asksAboutTelecomLaw &&
+          sourcePath.endsWith("loi_2010-013_communications_electroniques.pdf"))
           ? 4
           : 1;
+      const explicitStatuteBoost = matchesExplicitStatute ? 12 : 1;
 
       return {
         ...chunk,
@@ -330,7 +403,9 @@ export function searchDocuments(
           frequencyLicensingBoost *
           concessionApprovalBoost *
           postalLicenseBoost *
-          equipmentComplianceBoost,
+          equipmentComplianceBoost *
+          statuteTopicBoost *
+          explicitStatuteBoost,
       };
     })
     .filter(

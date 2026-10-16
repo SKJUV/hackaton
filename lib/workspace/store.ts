@@ -78,6 +78,29 @@ export function resetData(): Promise<void> {
   });
 }
 
+const COMPANY_SCOPED = ["members", "documents", "tasks", "quotes", "emails", "approvals", "activity", "checklist", "obligations", "messages"] as const;
+
+/**
+ * Réinitialise uniquement les données de DÉMONSTRATION : les entreprises réelles des utilisateurs,
+ * leurs comptes, abonnements et historiques sont conservés.
+ */
+export function resetDemoData(): Promise<void> {
+  return withData((data) => {
+    const fresh = buildSeed();
+    const realIds = new Set(data.companies.filter((c) => !c.isExample).map((c) => c.id));
+    const keep = <T extends { companyId: string }>(list: T[]) => list.filter((x) => realIds.has(x.companyId));
+    data.companies = [...fresh.companies, ...data.companies.filter((c) => realIds.has(c.id))];
+    for (const key of COMPANY_SCOPED) {
+      (data as Record<string, unknown>)[key] = [...(fresh[key] as { companyId: string }[]), ...keep(data[key] as { companyId: string }[])];
+    }
+    data.suppliers = fresh.suppliers;
+    const seedUserIds = new Set(fresh.users.map((u) => u.id));
+    data.users = [...fresh.users, ...data.users.filter((u) => !seedUserIds.has(u.id))];
+    const seedSubIds = new Set(fresh.subscriptions.map((x) => x.id));
+    data.subscriptions = [...fresh.subscriptions, ...data.subscriptions.filter((x) => !seedSubIds.has(x.id) && !seedUserIds.has(x.userId))];
+  });
+}
+
 /** Réservé aux tests. */
 export function __clearCache() {
   cache = null;

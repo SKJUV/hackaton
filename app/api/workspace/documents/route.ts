@@ -1,3 +1,4 @@
+import { assertCompanyAccess, assertObjectAccess } from "@/lib/workspace/access";
 import { generateBusinessPlan, generateLegalDocument, generateRoadmap, LEGAL_TEMPLATE_LABELS, type LegalTemplateKind } from "@/lib/cofounder/generators";
 import { getSnapshot, saveDocument, WorkspaceError } from "@/lib/workspace/service";
 import { handlePaid, readJson, s } from "@/lib/workspace/http";
@@ -7,9 +8,10 @@ export const runtime = "nodejs";
 
 /** Crée un document libre ou génère un document depuis un modèle (`generate`). */
 export async function POST(request: Request) {
-  return handlePaid(async () => {
+  return handlePaid(async (viewer) => {
     const b = await readJson(request);
     const companyId = s(b.companyId);
+    await assertCompanyAccess(companyId, viewer);
     const generate = s(b.generate);
     if (!generate) {
       return saveDocument(companyId, { title: s(b.title), kind: (s(b.kind) || "note") as DocumentKind, content: s(b.content) });

@@ -1,3 +1,4 @@
+import { assertCompanyAccess } from "@/lib/workspace/access";
 import { runAgent, type AgentTurn } from "@/lib/agent/runner";
 import { newId, nowIso, readData, withData } from "@/lib/workspace/store";
 import { log, WorkspaceError } from "@/lib/workspace/service";
@@ -8,9 +9,10 @@ export const maxDuration = 120;
 
 /** Agent co-fondateur : function-calling sur les outils du workspace. */
 export async function POST(request: Request) {
-  return handlePaid(async () => {
+  return handlePaid(async (viewer) => {
     const b = await readJson(request);
     const companyId = s(b.companyId);
+    await assertCompanyAccess(companyId, viewer);
     const message = s(b.message).trim();
     if (message.length < 2 || message.length > 4000) throw new WorkspaceError("Message entre 2 et 4 000 caractères.");
     const data = await readData();
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
 
     const reply = await runAgent(company, history);
     await withData((d) => {
-      d.messages.push({ id: newId("msg"), companyId, role: "assistant", content: reply.answer, toolTrace: reply.toolTrace, mode: reply.mode, createdAt: nowIso() });
+      d.messages.push({ id: newId("msg"), companyId, role: "assistant", content: reply.answer, toolTrace: reply.toolTrace, mode: reply.mode, grounding: reply.grounding, citations: reply.citations, createdAt: nowIso() });
       if (reply.toolTrace.length) log(d, companyId, "agent", "agent.actions", `${reply.toolTrace.length} outil(s) : ${reply.toolTrace.map((t) => t.tool).join(", ")}.`);
     });
     return reply;
@@ -36,7 +38,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const companyId = new URL(request.url).searchParams.get("companyId") ?? "";
-  return handlePaid(async () => {
+  return handlePaid(async (viewer) => {
+    await assertCompanyAccess(companyId, viewer);
     await withData((d) => {
       d.messages = d.messages.filter((m) => m.companyId !== companyId);
     });

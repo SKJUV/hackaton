@@ -29,4 +29,5 @@ ses fichiers ne sont simplement pas encore arrivés. Rien n'a encore été repri
    - prompts → `lib/agent/runner.ts` (`systemPrompt`) ;
    - générateurs (pitch, études, plans) → `lib/cofounder/generators.ts` ;
    - écrans → nouvel onglet dans `app/workspace/page.tsx` (déjà derrière le paywall).
-4. Citer la provenance (dépôt, branche, commit) dans les messages de commit et dans ce document.
+4. Ancrage juridique : tout module repris passe par `legalBasis()` avant de conseiller ou d'agir (voir `docs/ANCRAGE_JURIDIQUE.md`).
+5. Citer la provenance (dépôt, branche, commit) dans les messages de commit et dans ce document.

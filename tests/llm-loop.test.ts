@@ -26,7 +26,13 @@ describe("boucle LLM (fetch simulé)", () => {
     const reply = await runAgent(company, [{ role: "user", content: "Rappelle-moi d'appeler la banque" }]);
     expect(reply.mode).toBe("llm");
     expect(reply.answer).toContain("tâche créée");
-    expect(reply.toolTrace[0]).toMatchObject({ tool: "creer_tache", ok: true });
+    // La recherche juridique préalable est toujours exécutée en premier, avant les outils choisis par le modèle.
+    expect(reply.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "creer_tache"]);
+    expect(reply.grounding).not.toBeNull();
+    const first = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(first.messages[0].content).toMatch(/ANCRER chaque conseil/);
+    expect(first.messages.at(-1).content).toMatch(/RECHERCHE JURIDIQUE PRÉALABLE/);
+    expect(first.tools[0].function.name).toBe("rechercher_textes_juridiques");
     const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
     expect(second.messages.at(-1).role).toBe("tool");
     expect((await getSnapshot("co_kmerlog")).tasks.some((t) => t.title === "Appeler la banque")).toBe(true);

@@ -2,6 +2,7 @@
 
 import { Check, ExternalLink, FilePlus2, Mail, RefreshCw, Search, Send, ShieldAlert, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { Citation } from "@/lib/legal/citations";
 import type { LegalSearch } from "@/lib/legal/corpus";
 import type { Snapshot } from "@/lib/workspace/service";
 import type { WatchAlert } from "@/lib/compliance";
@@ -265,7 +266,7 @@ export function Checklist({ snap, refresh, notify }: TabProps) {
   const { run } = useAction(refresh, notify);
   return (
     <div className="ws-stack">
-      <div className="ws-info"><ExampleBadge /> Étapes génériques de démonstration : à remplacer/compléter par les procédures officielles (corpus fourni par l&apos;État). L&apos;agent cite le corpus pour les autorisations sectorielles.</div>
+      <div className="ws-info"><ExampleBadge /> Étapes juridiques : chaque étape affiche son fondement dans le corpus officiel fourni par l&apos;État, ou « non couvert par le corpus » si aucun texte disponible ne la décrit. Les intitulés d&apos;étapes sont des exemples génériques à confirmer.</div>
       {snap.checklist.map((s) => (
         <Card key={s.id} className={`ws-step is-${s.status}`} title={<>{s.order}. {s.title}</>} actions={
           <select value={s.status} onChange={(e) => void run(s.id, () => api(`/api/workspace/checklist/${s.id}`, "PATCH", { status: e.target.value }), "Démarche mise à jour")}>
@@ -276,6 +277,7 @@ export function Checklist({ snap, refresh, notify }: TabProps) {
           <div className="ws-row ws-small"><strong>Interlocuteur :</strong> {s.authority}</div>
           <div className="ws-tags">{s.documents.map((d) => <span key={d}>{d}</span>)}</div>
           {s.note && <p className="ws-muted">Note : {s.note}</p>}
+          <StepBasis query={`${s.title} ${s.authority}`} />
         </Card>
       ))}
     </div>
@@ -330,15 +332,17 @@ export function Documents({ snap, refresh, notify }: TabProps) {
 
 /* ----------------------------------------------------------------- Juridique */
 
+type LegalResult = LegalSearch & { grounding: { status: "fonde" | "partiel" | "non_couvert"; label: string } };
+
 export function Legal({ notify }: TabProps) {
   const [q, setQ] = useState("");
-  const [res, setRes] = useState<LegalSearch | null>(null);
+  const [res, setRes] = useState<LegalResult | null>(null);
   const [loading, setLoading] = useState(false);
   async function search() {
     if (q.trim().length < 3) return;
     setLoading(true);
     try {
-      setRes(await api<LegalSearch>(`/api/workspace/legal?q=${encodeURIComponent(q)}`));
+      setRes(await api<LegalResult>(`/api/workspace/legal?q=${encodeURIComponent(q)}`));
     } catch (e) {
       notify(e instanceof Error ? e.message : "Erreur", "error");
     } finally {
@@ -353,6 +357,11 @@ export function Legal({ notify }: TabProps) {
         <button className="ws-btn ws-btn-primary" disabled={loading}>Rechercher</button>
       </form>
       {res && !res.indexReady && <p className="ws-error">Index PDF absent : lancez <code>npm run index-documents</code>.</p>}
+      {res && (
+        <div className={`ws-grounding ${res.grounding.status === "fonde" ? "is-fonde" : res.grounding.status === "partiel" ? "is-partiel" : "is-non-couvert"}`}>
+          <strong>{res.grounding.status === "non_couvert" ? "⚠️ Non couvert par le corpus officiel : aucun texte disponible ne traite précisément cette question." : `⚖️ ${res.grounding.label}`}</strong>
+        </div>
+      )}
       {res?.citations.map((c) => (
         <Card key={c.id} className={c.isExample ? "is-example" : ""} title={c.legalTitle ?? c.title} actions={c.isExample ? <ExampleBadge /> : c.file.endsWith(".pdf") ? <a className="ws-link" href={`/api/document?file=${encodeURIComponent(c.file)}#page=${c.page}`} target="_blank" rel="noreferrer">PDF p. {c.page} <ExternalLink size={12} /></a> : null}>
           <small className="ws-muted">{c.category} · page {c.page}{c.articles.length ? ` · articles ${c.articles.join(", ")}` : ""}</small>
@@ -492,5 +501,38 @@ export function Journal({ snap }: TabProps) {
         <tbody>{snap.activity.map((a) => <tr key={a.id}><td className="ws-nowrap">{fmtDate(a.createdAt, true)}</td><td><Badge tone={a.actor === "agent" ? "violet" : a.actor === "system" ? "neutral" : "accent"}>{a.actor}</Badge></td><td><code>{a.action}</code></td><td>{a.details}</td></tr>)}</tbody>
       </table>
     </Card>
+  );
+}
+
+type StepBasisResult = { citations: Citation[]; grounding: { status: "fonde" | "partiel" | "non_couvert"; label: string } };
+
+/** Fondement juridique d'une étape, cherché dans le corpus officiel (route gratuite /api/workspace/legal). */
+function StepBasis({ query }: { query: string }) {
+  const [res, setRes] = useState<StepBasisResult | null>(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    let alive = true;
+    api<StepBasisResult>(`/api/workspace/legal?limit=2&q=${encodeURIComponent(query)}`)
+      .then((r) => alive && setRes(r))
+      .catch((e: Error) => alive && setErr(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [query]);
+  if (err) return <div className="ws-step-basis ws-muted">Fondement indisponible : {err}</div>;
+  if (!res) return <div className="ws-step-basis ws-muted">Recherche du fondement juridique…</div>;
+  const official = res.citations.filter((c) => !c.isExample);
+  return (
+    <div className={`ws-grounding ws-step-basis ${res.grounding.status === "fonde" ? "is-fonde" : res.grounding.status === "partiel" ? "is-partiel" : "is-non-couvert"}`}>
+      <strong>{res.grounding.status === "non_couvert" ? "⚠️ Non couvert par le corpus officiel" : `⚖️ ${res.grounding.label}`}</strong>
+      {res.grounding.status !== "non_couvert" && official[0] && (
+        <p>
+          « {official[0].excerpt.slice(0, 220).trim()}… »{" "}
+          {official[0].file.toLowerCase().endsWith(".pdf") && (
+            <a href={`/api/document?file=${encodeURIComponent(official[0].file)}#page=${official[0].page}`} target="_blank" rel="noreferrer">Ouvrir le texte</a>
+          )}
+        </p>
+      )}
+    </div>
   );
 }

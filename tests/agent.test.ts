@@ -38,7 +38,7 @@ describe("agent", () => {
     const { company } = await getSnapshot("co_kmerlog");
     const reply = await runAgent(company, [{ role: "user", content: "Trouve des fournisseurs de motos et demande des devis" }]);
     expect(reply.mode).toBe("demo");
-    expect(reply.toolTrace.map((t) => t.tool)).toEqual(["lister_fournisseurs", "demander_devis"]);
+    expect(reply.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "lister_fournisseurs", "demander_devis"]);
     const snap = await getSnapshot("co_kmerlog");
     expect(snap.approvals.filter((a) => a.status === "en_attente").length).toBeGreaterThan(0);
     expect(snap.emails.every((e) => e.status === "en_attente_approbation")).toBe(true);

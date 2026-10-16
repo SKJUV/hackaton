@@ -46,6 +46,14 @@ Autres commandes : `npm test` (vitest), `npm run typecheck`, `npm run build`,
 | **Veille réglementaire** | Croise les mots-clés du secteur de l'entreprise avec le corpus officiel ; les nouveaux textes déposés par l'État remontent en priorité. |
 | **Workspace multi-entreprise** | Plusieurs entreprises, membres et rôles, journal d'audit de toutes les actions (agent et humains). |
 
+## Ancrage juridique (priorité du co-fondateur)
+
+Le co-fondateur part **toujours** du corpus officiel : une recherche juridique est faite avant toute action
+(mode LLM comme mode démo), chaque action (business plan, démarches, contrats, fournisseurs, conformité) porte son
+propre fondement, les documents générés contiennent une section « Fondement juridique », et chaque réponse affiche
+un bandeau **« Fondé sur le corpus officiel »**, **« Partiellement couvert »** ou **« Non couvert par le corpus officiel »**.
+Si rien ne couvre la question, l'assistant le dit et n'invente pas. Détails : `docs/ANCRAGE_JURIDIQUE.md`.
+
 ## Connexion (jamais bloquante)
 
 | Moyen | Détail |
@@ -139,7 +147,7 @@ lib/
   billing/                    plans, abonnements, prestataires (simulation, CinetPay, NotchPay, Stripe)
 app/(compte)/                 connexion, inscription, mot de passe oublié, déconnexion, compte, tarifs
 corpus/officiel | exemples    textes de l'État | seeds d'exemple
-tests/                        vitest (34 tests)
+tests/                        vitest (46 tests)
 ```
 
 La persistance est un fichier JSON (`data/workspace.db.json`, ignoré par git) derrière
@@ -154,7 +162,8 @@ un emplacement payant est prêt (onglet « Studio co-fondateur », `/api/studio`
 ## Limites connues
 
 - Le sélecteur « Je suis » du workspace choisit le membre qui valide les actions (par défaut, celui dont l'email correspond au compte connecté).
-- Autorisation fine par entreprise à compléter : la liste est filtrée par utilisateur, mais les actions par identifiant (approbation, devis…) ne vérifient pas encore l'appartenance.
+- Contrôle d'appartenance (`lib/workspace/access.ts`) : chaque action (par entreprise ou par identifiant : approbation, devis, tâche, démarche, obligation, document) vérifie que l'utilisateur est membre de l'entreprise propriétaire, sinon 404. Une approbation sur une vraie entreprise ne peut être faite qu'en son propre nom. Les entreprises **de démonstration** restent partagées par tous (jeu de rôle libre) ; « Réinitialiser la démo » ne touche plus aux vraies entreprises ni aux comptes.
+- L'indicateur « fondé / non couvert » est lexical (voir `docs/ANCRAGE_JURIDIQUE.md`).
 - Stockage fichier : adapté à la démo et à un serveur unique, pas au serverless multi-instance.
 - Corpus actuel centré postes/télécoms/TIC, cybersécurité, commerce électronique, consommation, concurrence :
   le droit des sociétés, la fiscalité et le droit social sont à fournir (en attendant, exemples marqués).

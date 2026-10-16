@@ -1,3 +1,4 @@
+import { assertCompanyAccess, assertObjectAccess } from "@/lib/workspace/access";
 import { updateChecklistStep, WorkspaceError } from "@/lib/workspace/service";
 import { handlePaid, readJson, s } from "@/lib/workspace/http";
 import type { StepStatus } from "@/lib/workspace/types";
@@ -6,7 +7,8 @@ export const runtime = "nodejs";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return handlePaid(async () => {
+  return handlePaid(async (viewer) => {
+    await assertObjectAccess("checklist", id, viewer);
     const b = await readJson(request);
     const status = s(b.status) as StepStatus;
     if (!["a_faire", "en_cours", "fait", "bloque"].includes(status)) throw new WorkspaceError("Statut invalide.");

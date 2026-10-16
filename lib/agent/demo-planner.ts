@@ -1,5 +1,15 @@
+import type { Citation } from "@/lib/legal/citations";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
 import { TOOL_MAP, type ToolContext } from "./tools";
+import { summarizeGrounding } from "./grounding-summary";
+
+type Basis = { statut: string; libelle: string };
+const basisOf = (data: unknown): Basis | undefined => (data as { fondement_juridique?: Basis } | undefined)?.fondement_juridique;
+const basisLine = (data: unknown) => {
+  const b = basisOf(data);
+  return b ? `\n  ↳ ${b.statut === "non_couvert" ? "⚠️ " : "⚖️ "}${b.libelle}` : "";
+};
+const cite = (c: Citation) => `${c.legalTitle ?? c.title}, page ${c.page}${c.articles.length ? `, art. ${c.articles.slice(0, 3).join(", ")}` : ""}`;
 
 /**
  * Planificateur SEED (sans clé IA) : détecte les intentions par règles et appelle
@@ -26,7 +36,8 @@ const INTENTS: Intent[] = [
 ];
 
 export function detectIntents(message: string): string[] {
-  const m = norm(message);
+  // « fournisseur d'accès (internet) » / « fournisseur de services » désignent une activité réglementée, pas un achat.
+  const m = norm(message).replace(/fournisseurs? (d.acces|de services?)( a)?( internet)?/g, "activite reglementee");
   const found = INTENTS.filter((i) => i.test.test(m)).map((i) => i.name);
   if (found.includes("relance")) return ["relance", ...found.filter((f) => f !== "relance" && f !== "devis" && f !== "email")];
   if (found.includes("devis")) return found.filter((f) => f !== "email");
@@ -76,7 +87,7 @@ export function extractPurpose(message: string): string {
 }
 
 export async function runDemoPlanner(company: Company, message: string) {
-  const ctx: ToolContext = { companyId: company.id, citations: [] };
+  const ctx: ToolContext = { companyId: company.id, citations: [], groundings: [] };
   const trace: ToolTrace[] = [];
   const lines: string[] = [];
   const call = async (name: string, input: Record<string, unknown>) => {
@@ -93,19 +104,40 @@ export async function runDemoPlanner(company: Company, message: string) {
     }
   };
 
-  for (const intent of detectIntents(message)) {
+  // 1. Base juridique d'abord : recherche dans le corpus officiel sur la question, avant toute action.
+  const legal = await call("rechercher_textes_juridiques", { question: message });
+  const cov = (legal?.data as { couverture?: { statut: string; libelle: string } } | undefined)?.couverture;
+  const official = ctx.citations.filter((c) => !c.isExample);
+  const examples = ctx.citations.filter((c) => c.isExample);
+  const intents = detectIntents(message);
+  const legalOnly = intents.length === 1 && intents[0] === "juridique";
+  if (!cov || cov.statut === "non_couvert" || !official.length) {
+    lines.push(
+      `**Base juridique : non couverte par le corpus officiel.** Je n'ai trouvé aucun texte officiel qui traite précisément cette question ; je n'affirme donc aucune règle. Faites vérifier ce point auprès d'un professionnel du droit ou de l'administration compétente.${examples.length ? `\n${examples.map((c) => `- ⚠️ Texte d'exemple, non officiel — ${c.title} : « ${c.excerpt.slice(0, 200)} » [${c.id}]`).join("\n")}` : ""}`,
+    );
+  } else {
+    const shown = official.slice(0, legalOnly ? 3 : 2);
+    lines.push(
+      `**Base juridique : ${cov.libelle}.**${cov.statut === "partiel" ? " (couverture partielle : seuls certains aspects sont traités)" : ""} En mode démo, je cite les extraits sans les reformuler :\n${shown
+        .map((c) => `- ${cite(c)} : « ${c.excerpt.slice(0, legalOnly ? 280 : 180).trim()}… » [${c.id}]`)
+        .join("\n")}${examples.length ? `\n${examples.map((c) => `- ⚠️ Texte d'exemple, non officiel — ${c.title} : « ${c.excerpt.slice(0, 200)} » [${c.id}]`).join("\n")}` : ""}`,
+    );
+  }
+
+  // 2. Actions, chacune avec son propre fondement juridique.
+  for (const intent of intents) {
     switch (intent) {
       case "devis": {
         const { search, need } = extractNeed(message);
         const found = await call("lister_fournisseurs", { besoin: search });
-        const list = (found?.data as { id: string; nom: string }[] | undefined) ?? [];
+        const list = (found?.data as { fournisseurs?: { id: string; nom: string }[] } | undefined)?.fournisseurs ?? [];
         const top = list.slice(0, 3);
         if (!top.length) {
           lines.push("Je n'ai trouvé aucun fournisseur correspondant dans l'annuaire.");
           break;
         }
         const r = await call("demander_devis", { fournisseur_ids: top.map((s) => s.id), besoin: need });
-        if (r) lines.push(`**Fournisseurs contactés (après votre validation)** : ${top.map((s) => s.nom).join(", ")}. ${r.summary}. Validez-les dans l'onglet **Approbations** ; je suivrai les réponses et préparerai les relances.`);
+        if (r) lines.push(`**Fournisseurs contactés (après votre validation)** : ${top.map((s) => s.nom).join(", ")}. ${r.summary}. Validez-les dans l'onglet **Approbations** ; je suivrai les réponses et préparerai les relances.${basisLine(found?.data)}`);
         break;
       }
       case "relance": {
@@ -133,7 +165,7 @@ export async function runDemoPlanner(company: Company, message: string) {
       }
       case "business_plan": {
         const r = await call("generer_business_plan", { notes: message });
-        if (r) lines.push(`📄 ${r.summary}. Complétez les hypothèses chiffrées dans l'onglet **Documents**.`);
+        if (r) lines.push(`📄 ${r.summary}. Le document contient une section « Fondement juridique ». Complétez les hypothèses chiffrées dans l'onglet **Documents**.`);
         break;
       }
       case "roadmap": {
@@ -146,14 +178,19 @@ export async function runDemoPlanner(company: Company, message: string) {
         const m = norm(message);
         const type = /statuts/.test(m) ? "statuts" : /nda|confidentialite/.test(m) ? "nda" : /travail|embauche/.test(m) ? "contrat_travail" : /proces|pv/.test(m) ? "pv_ag" : "contrat_prestation";
         const r = await call("generer_document_juridique", { type });
-        if (r) lines.push(`⚖️ ${r.summary}. Faites-la relire par un professionnel avant signature.`);
+        if (r) lines.push(`⚖️ ${r.summary}. Sources listées dans la section « Fondement juridique » du document ; faites-le relire par un professionnel avant signature.`);
         break;
       }
       case "checklist": {
         const r = await call("checklist_creation_entreprise", {});
-        const steps = (r?.data as { titre: string; statut: string }[]) ?? [];
+        const steps = (r?.data as { ordre: number; titre: string; statut: string; fondement: Basis }[]) ?? [];
         const next = steps.find((s) => s.statut !== "fait");
-        if (r) lines.push(`✅ ${r.summary}.${next ? ` Prochaine étape : **${next.titre}**.` : ""} (Étapes génériques d'exemple, à confirmer avec le corpus officiel.)`);
+        if (r)
+          lines.push(
+            `✅ **Étapes juridiques** — ${r.summary} :\n${steps
+              .map((s) => `${s.ordre}. ${s.titre} (${s.statut.replace("_", " ")}) — ${s.fondement.statut === "non_couvert" ? "⚠️ non couvert par le corpus officiel" : s.fondement.libelle}`)
+              .join("\n")}${next ? `\nProchaine étape : **${next.titre}**.` : ""}\n(Étapes génériques d'exemple : le fondement indiqué provient du corpus officiel ; « non couvert » signifie qu'aucun texte disponible ne la décrit.)`,
+          );
         break;
       }
       case "conformite": {
@@ -188,23 +225,10 @@ export async function runDemoPlanner(company: Company, message: string) {
         if (d) lines.push(`☀️ ${r!.summary}\n- Approbations : ${d.approbations_en_attente.length ? d.approbations_en_attente.join(" ; ") : "aucune"}\n- Prochaines démarches : ${d.prochaines_demarches.join(" ; ") || "—"}\n${d.recommandations.map((x) => `- ${x}`).join("\n")}`);
         break;
       }
-      case "juridique": {
-        const r = await call("rechercher_textes_juridiques", { question: message });
-        if (!ctx.citations.length) {
-          lines.push("Je n'ai trouvé aucun passage pertinent dans le corpus indexé.");
-          break;
-        }
-        const official = ctx.citations.filter((c) => !c.isExample);
-        const examples = ctx.citations.filter((c) => c.isExample);
-        lines.push(
-          `**Passages trouvés dans le corpus** (${r?.summary}). En mode démo, je cite les extraits sans les reformuler :\n${official
-            .slice(0, 3)
-            .map((c) => `- ${c.legalTitle ?? c.title}, page ${c.page}${c.articles.length ? `, art. ${c.articles.slice(0, 3).join(", ")}` : ""} : « ${c.excerpt.slice(0, 280).trim()}… » [${c.id}]`)
-            .join("\n")}${examples.length ? `\n${examples.map((c) => `- ⚠️ Texte d'exemple, non officiel — ${c.title} : « ${c.excerpt.slice(0, 200)} » [${c.id}]`).join("\n")}` : ""}`,
-        );
+      case "juridique":
+        // Déjà traité : la recherche juridique est toujours exécutée en premier.
         break;
-      }
     }
   }
-  return { answer: lines.join("\n\n"), toolTrace: trace, citations: ctx.citations, mode: "demo" as const };
+  return { answer: lines.join("\n\n"), toolTrace: trace, citations: ctx.citations, grounding: summarizeGrounding(ctx.groundings), mode: "demo" as const };
 }

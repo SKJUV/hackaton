@@ -2,7 +2,9 @@
  * Point d'accueil des modules issus de Noah12345578/ai-cofounder-studio.
  *
  * Tout ce qui est enregistré ici est servi derrière le paywall (`/api/studio`, onglet « Studio co-fondateur »
- * du workspace). Chaque module doit citer sa provenance (dépôt, branche, commit) et la licence.
+ * du workspace). Chaque module doit citer sa provenance (dépôt, branche, commit) et la licence, et respecter
+ * l'ancrage juridique : appeler `legalBasis()` (lib/agent/tools.ts) avant de conseiller ou d'agir, citer ses
+ * sources et dire « non couvert par le corpus » le cas échéant (voir docs/ANCRAGE_JURIDIQUE.md).
  */
 export type StudioModule = {
   id: string;

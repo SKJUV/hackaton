@@ -184,7 +184,18 @@ export type AgentMessage = {
   content: string;
   toolTrace?: ToolTrace[];
   mode?: "llm" | "demo";
+  /** Ancrage juridique de la réponse (statut + sources), conservé pour l'historique. */
+  grounding?: MessageGrounding | null;
+  citations?: import("@/lib/legal/citations").Citation[];
   createdAt: string;
+};
+
+export type MessageGrounding = {
+  status: "fonde" | "partiel" | "non_couvert";
+  label: string;
+  query: string;
+  sources: { id: string; document: string; page: number; articles: string[]; file: string; isExample: boolean }[];
+  actions: { query: string; status: "fonde" | "partiel" | "non_couvert"; label: string }[];
 };
 
 export type ToolTrace = {

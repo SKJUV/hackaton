@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { WorkspaceError } from "./service";
+import type { Viewer } from "./access";
 
 export async function readJson(request: Request): Promise<Record<string, unknown>> {
   try {
@@ -23,9 +24,9 @@ export async function handle(fn: () => Promise<unknown>) {
 export const s = (v: unknown) => (typeof v === "string" ? v : "");
 
 /** Variante protégée : l'assistant (workspace + agent) fait partie de l'offre payante. */
-export async function handlePaid(fn: () => Promise<unknown>) {
+export async function handlePaid(fn: (viewer: Viewer) => Promise<unknown>) {
   const { assistantGuard } = await import("@/lib/auth/current");
-  const { denied } = await assistantGuard();
+  const { user, denied } = await assistantGuard();
   if (denied) return denied;
-  return handle(fn);
+  return handle(() => fn({ user, email: user?.email ?? null }));
 }

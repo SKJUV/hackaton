@@ -1,12 +1,12 @@
-import { resetData } from "@/lib/workspace/store";
+import { resetDemoData } from "@/lib/workspace/store";
 import { handlePaid } from "@/lib/workspace/http";
 
 export const runtime = "nodejs";
 
-/** Réinitialise le workspace avec les données de démonstration. */
+/** Réinitialise les données de démonstration (les entreprises réelles et les comptes sont conservés). */
 export async function POST() {
   return handlePaid(async () => {
-    await resetData();
+    await resetDemoData();
     return { ok: true };
   });
 }

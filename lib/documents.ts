@@ -41,7 +41,7 @@ export async function loadDocumentChunks(): Promise<DocumentChunk[]> {
   return cachedChunks;
 }
 
-function terms(text: string): string[] {
+export function terms(text: string): string[] {
   return text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

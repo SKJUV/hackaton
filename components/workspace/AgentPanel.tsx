@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowUp, Bot, CheckCircle2, ExternalLink, Loader2, Trash2, Wrench, XCircle } from "lucide-react";
+import { ArrowUp, Bot, CheckCircle2, ExternalLink, Loader2, Trash2, Wrench, XCircle, Scale } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Citation } from "@/lib/legal/citations";
 import type { Snapshot } from "@/lib/workspace/service";
-import type { ToolTrace } from "@/lib/workspace/types";
+import type { ToolTrace, MessageGrounding } from "@/lib/workspace/types";
 import { api, Badge, Markdown } from "./ui";
 
-type Msg = { role: "user" | "assistant"; content: string; toolTrace?: ToolTrace[]; citations?: Citation[]; mode?: string; provider?: string; notice?: string };
+type Msg = { role: "user" | "assistant"; content: string; toolTrace?: ToolTrace[]; citations?: Citation[]; grounding?: MessageGrounding | null; mode?: string; provider?: string; notice?: string };
 
 const SUGGESTIONS = [
   "Donne-moi mon briefing du jour",
@@ -48,7 +48,7 @@ export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange:
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessages(snap.messages.map((m) => ({ role: m.role, content: m.content, toolTrace: m.toolTrace, mode: m.mode })));
+    setMessages(snap.messages.map((m) => ({ role: m.role, content: m.content, toolTrace: m.toolTrace, mode: m.mode, grounding: m.grounding, citations: m.citations })));
     // Recharge uniquement au changement d'entreprise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap.company.id]);
@@ -65,8 +65,8 @@ export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange:
     setMessages((m) => [...m, { role: "user", content: message }]);
     setLoading(true);
     try {
-      const reply = await api<{ answer: string; toolTrace: ToolTrace[]; citations: Citation[]; mode: string; provider?: string; notice?: string }>("/api/agent", "POST", { companyId: snap.company.id, message });
-      setMessages((m) => [...m, { role: "assistant", content: reply.answer, toolTrace: reply.toolTrace, citations: reply.citations, mode: reply.mode, provider: reply.provider, notice: reply.notice }]);
+      const reply = await api<{ answer: string; toolTrace: ToolTrace[]; citations: Citation[]; grounding: MessageGrounding | null; mode: string; provider?: string; notice?: string }>("/api/agent", "POST", { companyId: snap.company.id, message });
+      setMessages((m) => [...m, { role: "assistant", content: reply.answer, toolTrace: reply.toolTrace, citations: reply.citations, grounding: reply.grounding, mode: reply.mode, provider: reply.provider, notice: reply.notice }]);
       onChange();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -107,6 +107,7 @@ export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange:
               </div>
             )}
             {m.notice && <p className="ws-notice">{m.notice}</p>}
+            {m.role === "assistant" && m.grounding && <GroundingBar g={m.grounding} />}
             {m.toolTrace && m.toolTrace.length > 0 && (
               <div className="ws-trace">
                 {m.toolTrace.map((t, j) => (
@@ -118,7 +119,13 @@ export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange:
               </div>
             )}
             <Markdown text={m.content} />
-            {m.citations && m.citations.length > 0 && (
+            {m.citations && m.citations.length > 0 && m.grounding?.status === "non_couvert" && (
+              <details className="ws-citations-hidden">
+                <summary>Passages consultés, jugés non pertinents ({m.citations.length})</summary>
+                <CitationList citations={m.citations} />
+              </details>
+            )}
+            {m.citations && m.citations.length > 0 && m.grounding?.status !== "non_couvert" && (
               <div className="ws-citations">
                 {m.citations.map((c) => (
                   <div key={c.id} className={`ws-citation ${c.isExample ? "is-example" : ""}`}>
@@ -177,5 +184,54 @@ export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange:
         <button type="submit" className="ws-send" disabled={loading || !input.trim()} aria-label="Envoyer"><ArrowUp size={18} /></button>
       </form>
     </div>
+  );
+}
+
+/** Indicateur d'ancrage juridique : « Fondé sur le texte X » ou « Non couvert par le corpus ». */
+export function GroundingBar({ g }: { g: MessageGrounding }) {
+  const official = g.sources.filter((s) => !s.isExample);
+  const tone = g.status === "fonde" ? "is-fonde" : g.status === "partiel" ? "is-partiel" : "is-non-couvert";
+  return (
+    <div className={`ws-grounding ${tone}`} role="note" aria-label="Base juridique de la réponse">
+      <div className="ws-grounding-head">
+        <Scale size={14} />
+        <strong>{g.status === "non_couvert" ? "Non couvert par le corpus officiel" : g.status === "fonde" ? "Fondé sur le corpus officiel" : "Partiellement couvert par le corpus"}</strong>
+      </div>
+      {g.status !== "non_couvert" && official.length > 0 ? (
+        <ul>
+          {official.slice(0, 3).map((s) => (
+            <li key={s.id}>
+              <span className="ws-cite">{s.id}</span> {s.document} · p. {s.page}
+              {s.articles.length > 0 && ` · art. ${s.articles.slice(0, 3).join(", ")}`}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Aucun texte officiel disponible ne traite précisément cette question : aucune règle n&apos;est inventée.</p>
+      )}
+      {g.actions.length > 0 && (
+        <details>
+          <summary>Fondement de chaque action ({g.actions.length})</summary>
+          <ul>
+            {g.actions.map((a, i) => (
+              <li key={i} className={a.status === "non_couvert" ? "is-non-couvert" : ""}>{a.label} <small>— « {a.query.slice(0, 80)} »</small></li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function CitationList({ citations }: { citations: Citation[] }) {
+  return (
+    <ul className="ws-citations-compact">
+      {citations.map((c) => (
+        <li key={c.id}>
+          <span className="ws-cite">{c.id}</span> {c.legalTitle ?? c.title} · p. {c.page}
+          {c.isExample && " · ⚠️ exemple non officiel"}
+        </li>
+      ))}
+    </ul>
   );
 }

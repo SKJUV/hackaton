@@ -1392,3 +1392,79 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+.shortcut,
+.eyebrow,
+.topic-link span,
+.sidebar-note strong,
+.sidebar-note p,
+.profile-copy strong,
+.profile-copy small,
+.topbar-context,
+.country-tag,
+.welcome-badge,
+.composer-hint,
+.suggestion-heading,
+.suggestion-copy strong,
+.suggestion-copy small,
+.question-library-toggle,
+.question-library-intro strong,
+.question-library-intro span,
+.question-library-filters input,
+.question-library-filters select,
+.question-library-empty,
+.question-library-pagination,
+.question-library-pagination button,
+.trust-note,
+.error-banner,
+.back-home,
+.conversation-label,
+.message-author,
+.answer-source-label,
+.sources-title > span:first-child,
+.source-count,
+.source-copy strong,
+.source-copy small,
+.show-sources-button,
+.no-sources-note,
+.legal-footnote,
+.keyboard-hint {
+  font-size: 12px;
+}
+
+.welcome-badge,
+.composer-hint,
+.suggestion-heading,
+.question-library-intro span,
+.question-library-pagination,
+.trust-note,
+.conversation-label,
+.answer-source-label,
+.source-count,
+.source-copy small,
+.no-sources-note,
+.legal-footnote {
+  color: #66736a;
+}
+
+.suggestion-copy strong,
+.source-copy strong {
+  color: #3f4d43;
+}
+
+.suggestion-copy small {
+  -webkit-line-clamp: 2;
+}
+
+.message-user .message-text,
+.message-text {
+  font-size: 14px;
+}
+
+.message-text h3 {
+  font-size: 15px;
+}
+
+.source-marker {
+  font-size: 11px;
+}

@@ -74,6 +74,39 @@ const relatedLegalTerms: Record<string, string[]> = {
   operateur: ["telecommunications", "communications", "electroniques", "abonne"],
   facture: ["facturation", "tarif", "paiement", "contestation"],
   recours: ["plainte", "reclamation", "conciliation", "arbitrage", "reparation"],
+  internet: ["service", "fourniture", "declaration", "public", "communications", "electroniques"],
+  mobile: ["reseau", "radioelectrique", "public", "licence", "frequences", "operateur"],
+  virtuel: ["operateur", "reseau", "public", "licence", "communications", "electroniques"],
+  antennes: ["installation", "radioelectrique", "agrement", "autorisation"],
+  antenne: ["installation", "radioelectrique", "agrement", "autorisation"],
+  telephone: ["terminal", "homologation", "equipement", "modele", "type"],
+  telephones: ["terminal", "homologation", "equipement", "modele", "type"],
+  equipement: ["homologation", "terminal", "conformite", "agrement", "modele", "type"],
+  equipements: ["homologation", "terminal", "conformite", "agrement", "modele", "type"],
+  importer: ["importes", "homologation", "equipements", "terminaux", "commercialisation"],
+  vendre: ["homologation", "equipements", "terminaux", "commercialisation"],
+  vente: ["homologation", "equipements", "terminaux", "commercialisation"],
+  laboratoire: ["essais", "mesures", "agrement", "equipements", "terminaux"],
+  tester: ["essais", "mesures", "laboratoire", "agrement", "certification"],
+  frequences: ["assignation", "radioelectrique", "redevance", "temporaire", "disponibilite"],
+  frequence: ["assignation", "radioelectrique", "redevance", "temporaire", "disponibilite"],
+  festival: ["evenement", "temporaire", "assignation", "frequences", "radioelectrique"],
+  boutique: ["commerce", "electronique", "vendeur", "consommateur", "commande", "information"],
+  signature: ["electronique", "certificat", "certification", "authentification", "preuve"],
+  collecte: ["donnees", "personnelles", "traitement", "responsable", "vie", "privee"],
+  colis: ["postal", "poste", "courrier", "envoi", "operateur"],
+  livraison: ["postal", "poste", "colis", "courrier", "operateur"],
+  courrier: ["postal", "poste", "colis", "service", "operateur"],
+  relais: ["postal", "poste", "colis", "distribution", "operateur"],
+  postal: ["poste", "operateur", "reseau", "autorisation", "concession", "service"],
+  postaux: ["poste", "operateur", "reseau", "autorisation", "concession", "service"],
+  poste: ["postal", "operateur", "licence", "concession", "courrier", "distribution"],
+  forfaits: ["abonne", "identification", "identite", "module", "sim", "operateur"],
+  prepayes: ["abonne", "identification", "identite", "module", "sim", "operateur"],
+  interconnexion: ["acces", "reseau", "degroupage", "partage", "catalogue", "operateur"],
+  itinérance: ["national", "operateur", "reseau", "couverture", "accord"],
+  itinerance: ["national", "operateur", "reseau", "couverture", "accord"],
+  autorisations: ["autorisation", "licence", "concession", "agrement", "declaration"],
 };
 
 const operatorSetupTerms = [
@@ -108,25 +141,33 @@ export function searchDocuments(
   limit = 6,
 ): SearchResult[] {
   const originalQueryTerms = terms(query);
+  const isBusinessQuestion = originalQueryTerms.some((term) =>
+    ["veux", "veut", "creer", "lancer", "ouvrir", "importer", "developper", "business", "entreprise"].includes(term),
+  );
   const asksAboutStartingTelecomActivity =
-    originalQueryTerms.some((term) =>
-      ["operateur", "telecom", "telecommunications"].includes(term),
-    ) &&
-    originalQueryTerms.some((term) =>
+    (originalQueryTerms.some((term) => ["operateur", "telecom", "telecommunications"].includes(term)) ||
+      originalQueryTerms.includes("internet")) &&
+    (isBusinessQuestion ||
+      originalQueryTerms.some((term) =>
+        ["devenir", "obtenir", "demarche", "demarches", "procedure", "procedures", "exploiter"].includes(term),
+      )) &&
+    !originalQueryTerms.some((term) =>
       [
-        "devenir",
-        "creer",
-        "lancer",
-        "ouvrir",
-        "obtenir",
-        "demarche",
-        "demarches",
-        "procedure",
-        "procedures",
-        "condition",
-        "conditions",
-        "exploiter",
+        "identification",
+        "abonne",
+        "abonnes",
+        "forfait",
+        "forfaits",
+        "prepayes",
+        "sim",
+        "itinérance",
+        "itinerance",
+        "interconnexion",
       ].includes(term),
+    );
+  const asksAboutPostalBusiness =
+    originalQueryTerms.some((term) =>
+      ["postal", "postaux", "poste", "colis", "livraison", "courrier", "relais"].includes(term),
     );
   const asksAboutChildren = originalQueryTerms.some((term) =>
     ["enfant", "enfants", "mineur", "mineurs", "parental"].includes(term),
@@ -136,6 +177,22 @@ export function searchDocuments(
       ...originalQueryTerms,
       ...originalQueryTerms.flatMap((term) => relatedLegalTerms[term] ?? []),
       ...(asksAboutStartingTelecomActivity ? operatorSetupTerms : []),
+      ...(asksAboutPostalBusiness
+        ? [
+            "licence",
+            "concession",
+            "declaration",
+            "reseau",
+            "collecte",
+            "tri",
+            "transport",
+            "distribution",
+            "courrier",
+            "non",
+            "reserves",
+            "redevance",
+          ]
+        : []),
     ]),
   ];
   if (queryTerms.length === 0 || chunks.length === 0) return [];
@@ -242,6 +299,25 @@ export function searchDocuments(
         /convention de concession|approuvés? par décret du Président/i.test(chunk.text)
           ? 2.5
           : 1;
+      const postalLicenseBoost =
+        asksAboutPostalBusiness &&
+        sourcePath.includes("recueil") &&
+        /article\s*38/i.test(chunk.text)
+          ? 15
+          : asksAboutPostalBusiness &&
+              sourcePath.includes("recueil") &&
+              /article\s*34|licence est délivrée|services postaux non réservés|courrier accéléré/i.test(
+                chunk.text,
+              )
+            ? 5
+          : 1;
+      const equipmentComplianceBoost =
+        originalQueryTerms.some((term) =>
+          ["equipement", "equipements", "telephone", "telephones", "importer", "vendre", "vente"].includes(term),
+        ) &&
+        /homologation|équipements? terminaux|agrément.*équipements/i.test(chunk.text)
+          ? 4
+          : 1;
 
       return {
         ...chunk,
@@ -252,10 +328,18 @@ export function searchDocuments(
           licensingProcedureBoost *
           licenseScopeBoost *
           frequencyLicensingBoost *
-          concessionApprovalBoost,
+          concessionApprovalBoost *
+          postalLicenseBoost *
+          equipmentComplianceBoost,
       };
     })
-    .filter((result) => result.score > 0)
+    .filter(
+      (result) =>
+        result.score > 0 &&
+        (!asksAboutPostalBusiness ||
+          (result.source.toLocaleLowerCase("fr").includes("recueil") &&
+            /postal|postaux|courrier|colis/i.test(result.text))),
+    )
     .sort((a, b) => b.score - a.score);
 
   const selectedResults: SearchResult[] = [];
@@ -269,7 +353,9 @@ export function searchDocuments(
       continue;
     }
     const perDocumentLimit = primarySource
-      ? asksAboutStartingTelecomActivity &&
+      ? asksAboutPostalBusiness && result.source.toLocaleLowerCase("fr").includes("recueil")
+        ? 5
+        : asksAboutStartingTelecomActivity &&
         result.source.toLocaleLowerCase("fr").startsWith("reglementation/lois/")
         ? 4
         : 2

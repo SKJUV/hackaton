@@ -37,6 +37,12 @@ import { VoiceInputButton } from "../components/voice/VoiceInputButton";
 
 // Chat Components
 import { MessageActions } from "../components/chat/MessageActions";
+import { ChatHistoryListView } from "../components/chat/ChatHistoryListView";
+
+// Hackathon Feature & Floating Nav Components
+import { FloatingPillNavBar, type NavTab } from "../components/ui/FloatingPillNavBar";
+import { ComplianceDiagnosticView } from "../components/diagnostic/ComplianceDiagnosticView";
+import { UserProfileView } from "../components/profile/UserProfileView";
 
 /* ===== TYPES ===== */
 type Citation = {
@@ -277,6 +283,9 @@ export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
+  // Floating Nav Tab State
+  const [activeTab, setActiveTab] = useState<NavTab>("home");
+
   // Drawer & Toast State
   const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -494,6 +503,7 @@ export default function Home() {
     setQuestion("");
     setError("");
     setSidebarOpen(false);
+    setActiveTab("home");
     window.setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
@@ -502,6 +512,7 @@ export default function Home() {
     setMessages(session.messages);
     setError("");
     setSidebarOpen(false);
+    setActiveTab("home");
   }
 
   function deleteSession(id: string) {
@@ -715,7 +726,15 @@ export default function Home() {
             <Menu size={22} strokeWidth={2} />
           </button>
 
-          <a className="topbar-brand" href="/" aria-label="Accueil Droit.cm">
+          <a
+            className="topbar-brand"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab("home");
+            }}
+            aria-label="Accueil Droit.cm"
+          >
             <span>droit</span>.cm
             <span className="status-dot" title="Assistant en ligne" />
           </a>
@@ -731,8 +750,45 @@ export default function Home() {
           </button>
         </header>
 
-        <div className={`conversation ${messages.length ? "conversation-active" : ""}`}>
-          {messages.length === 0 ? (
+        {/* Tab 2: Diagnostic de conformité & Recherche de lois */}
+        {activeTab === "diagnostic" && (
+          <ComplianceDiagnosticView
+            onAskAboutResult={(prompt) => {
+              setActiveTab("home");
+              void askQuestion(prompt);
+            }}
+          />
+        )}
+
+        {/* Tab 3: Historique des discussions */}
+        {activeTab === "history" && (
+          <ChatHistoryListView
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSelectSession={(s) => {
+              loadSession(s);
+              setActiveTab("home");
+            }}
+            onDeleteSession={deleteSession}
+            onStartNewChat={() => {
+              startNewConversation();
+              setActiveTab("home");
+            }}
+          />
+        )}
+
+        {/* Tab 4: Profil & Espace Juridique */}
+        {activeTab === "profile" && (
+          <UserProfileView
+            onReopenTutorial={reopenTutorial}
+            onGoToDiagnostic={() => setActiveTab("diagnostic")}
+          />
+        )}
+
+        {/* Tab 1: Accueil / Conversation & Chat RAG */}
+        {activeTab === "home" && (
+          <div className={`conversation ${messages.length ? "conversation-active" : ""}`}>
+            {messages.length === 0 ? (
             <div className="welcome">
               <div className="welcome-badge">
                 <Scale size={13} />
@@ -899,9 +955,10 @@ export default function Home() {
             </div>
           )}
         </div>
+      )}
 
-        {/* Bottom Composer when conversation is active */}
-        {messages.length > 0 && (
+        {/* Bottom Composer when conversation is active (Home tab only) */}
+        {activeTab === "home" && messages.length > 0 && (
           <div className="bottom-composer-wrap">
             <form className="composer conversation-composer" onSubmit={handleSubmit}>
               <textarea
@@ -941,6 +998,15 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Floating Pill Nav Bar (Dock Capsule) */}
+      <FloatingPillNavBar
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          setSidebarOpen(false);
+        }}
+      />
     </main>
   );
 }

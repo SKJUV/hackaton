@@ -1,6 +1,6 @@
 # Droit.cm
 
-Assistant web d'information juridique basé sur les documents fournis pour le Cameroun. Les réponses Gemini sont générées à partir des passages retrouvés dans `reglementation/` et `publications/`, avec des références vers les PDF et leurs pages.
+Assistant web d'information juridique basé sur les documents fournis pour le Cameroun. Les réponses Gemini ou Groq sont générées à partir des passages retrouvés dans `reglementation/` et `publications/`, avec des références vers les PDF et leurs pages.
 
 ## Prérequis
 
@@ -19,10 +19,13 @@ Dans `.env.local`, ajoute une clé **nouvellement créée** dans Google AI Studi
 
 ```dotenv
 GEMINI_API_KEY=your_private_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
+LLM_PROVIDER=auto
 ```
 
-N'ajoute jamais une clé API au code client, au dépôt Git ou à une conversation publique. Redémarre le serveur après avoir modifié `.env.local`.
+Groq est une API distincte : crée une clé gratuite sur [console.groq.com](https://console.groq.com/) si tu veux l'utiliser. Quand les deux clés sont configurées, `LLM_PROVIDER=auto` essaie Groq puis Gemini, avec un modèle Gemini de secours en cas de surcharge. Tu peux choisir `groq` ou `gemini` avec `LLM_PROVIDER`. N'ajoute jamais une clé API au code client, au dépôt Git ou à une conversation publique. Redémarre le serveur après avoir modifié `.env.local`.
 
 Prépare ensuite l'index documentaire et démarre l'application :
 

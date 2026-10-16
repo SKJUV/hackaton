@@ -99,17 +99,44 @@ export function searchDocuments(
           ((frequency * 2.2) / (frequency + lengthNormalization));
       }
 
-      return { ...chunk, score };
+      const sourcePath = chunk.source.toLocaleLowerCase("fr");
+      const isOfficialRegulation =
+        sourcePath.startsWith("reglementation/lois/") ||
+        sourcePath.startsWith("reglementation/décret/") ||
+        sourcePath.startsWith("reglementation/arrete/") ||
+        sourcePath.startsWith("reglementation/decision/") ||
+        sourcePath.startsWith("reglementation/directives/");
+      const isLegalCompilation =
+        sourcePath.includes("recueil") || sourcePath.includes("recueil de texte");
+      const isOfficialLegalSource =
+        isOfficialRegulation ||
+        (isLegalCompilation &&
+          (sourcePath.startsWith("reglementation/") ||
+            chunk.title.toLocaleLowerCase("fr").includes("textes")));
+      const sourceWeight = isOfficialRegulation
+        ? 2.2
+        : isOfficialLegalSource
+          ? 1.7
+          : isLegalCompilation
+            ? 1.35
+            : sourcePath.startsWith("publications/appel")
+              ? 0.25
+              : 0.55;
+
+      return { ...chunk, score: score * sourceWeight };
     })
     .filter((result) => result.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  const seenDocuments = new Set<string>();
-  const diversified = results.filter((result) => {
-    if (seenDocuments.has(result.source)) return false;
-    seenDocuments.add(result.source);
-    return true;
-  });
+  const bestPerDocument = new Map<string, SearchResult>();
+  for (const result of results) {
+    const current = bestPerDocument.get(result.source);
+    if (!current || result.score > current.score) {
+      bestPerDocument.set(result.source, result);
+    }
+  }
 
-  return diversified.slice(0, limit);
+  return [...bestPerDocument.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }

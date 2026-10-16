@@ -11,10 +11,12 @@ import {
   Globe2,
   HelpCircle,
   Menu,
+  MessageSquare,
   Plus,
   Scale,
   ShieldCheck,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState, type ReactNode } from "react";
@@ -31,7 +33,6 @@ import { SplashScreen } from "../components/onboarding/SplashScreen";
 
 // Home & Voice Components
 import { QuickActionChips } from "../components/home/QuickActionChips";
-import { TopicCardsGrid } from "../components/home/TopicCardsGrid";
 import { VoiceInputButton } from "../components/voice/VoiceInputButton";
 
 // Chat Components
@@ -51,6 +52,13 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+};
+
+type ChatSession = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: Message[];
 };
 
 /* ===== SIDEBAR TOPICS ===== */
@@ -264,10 +272,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllSources, setShowAllSources] = useState(false);
-  const [showQuestionLibrary, setShowQuestionLibrary] = useState(false);
-  const [questionSearch, setQuestionSearch] = useState("");
-  const [questionCategory, setQuestionCategory] = useState("Toutes les catégories");
-  const [questionPage, setQuestionPage] = useState(0);
+
+  // Chat History Sessions
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   // Drawer & Toast State
   const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null);
@@ -277,23 +285,37 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const filteredBusinessQuestions = businessQuestionCategories.filter(
-    ({ prompt, category }) =>
-      (questionCategory === "Toutes les catégories" || category === questionCategory) &&
-      prompt.toLocaleLowerCase("fr").includes(questionSearch.trim().toLocaleLowerCase("fr")),
-  );
-  const questionsPerPage = 8;
-  const visibleBusinessQuestions = filteredBusinessQuestions.slice(
-    questionPage * questionsPerPage,
-    (questionPage + 1) * questionsPerPage,
-  );
-
   useEffect(() => {
     // Check onboarding status
     const seen = localStorage.getItem("droit-cm-onboarded");
     if (!seen) {
       setShowOnboarding(true);
     }
+
+    // Load sessions from localStorage
+    try {
+      const stored = localStorage.getItem("droit_cm_chat_sessions");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSessions(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load sessions from localStorage", e);
+    }
+  }, []);
+
+  // Shortcut Cmd+K or Ctrl+K for new chat
+  useEffect(() => {
+    const handleKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        startNewConversation();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   function handleCompleteOnboarding() {
@@ -339,8 +361,48 @@ export default function Home() {
     setQuestion("");
     setError("");
     setShowAllSources(false);
-    setMessages((current) => [...current, { role: "user", content: trimmed }]);
+
+    const userMessage: Message = { role: "user", content: trimmed };
+    const nextMessages: Message[] = [...messages, userMessage];
+    setMessages(nextMessages);
     setLoading(true);
+
+    // Track or create session ID
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      activeSessionId = `session_${Date.now()}`;
+      setCurrentSessionId(activeSessionId);
+      const title = trimmed.length > 38 ? trimmed.slice(0, 38) + "…" : trimmed;
+      const newSession: ChatSession = {
+        id: activeSessionId,
+        title,
+        updatedAt: Date.now(),
+        messages: nextMessages,
+      };
+      setSessions((prev) => {
+        const updated = [newSession, ...prev.filter((s) => s.id !== activeSessionId)].slice(0, 30);
+        try {
+          localStorage.setItem("droit_cm_chat_sessions", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    } else {
+      setSessions((prev) => {
+        const updated = prev.map((s) =>
+          s.id === activeSessionId
+            ? { ...s, updatedAt: Date.now(), messages: nextMessages }
+            : s,
+        );
+        try {
+          localStorage.setItem("droit_cm_chat_sessions", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    }
 
     try {
       const response = await fetch("/api/chat", {
@@ -396,10 +458,24 @@ export default function Home() {
       }
 
       const citations = data.citations;
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: answer, citations },
-      ]);
+      const assistantMessage: Message = { role: "assistant", content: answer, citations };
+      const finalMessages = [...nextMessages, assistantMessage];
+      setMessages(finalMessages);
+
+      // Update session with assistant answer
+      setSessions((prev) => {
+        const updated = prev.map((s) =>
+          s.id === activeSessionId
+            ? { ...s, updatedAt: Date.now(), messages: finalMessages }
+            : s,
+        );
+        try {
+          localStorage.setItem("droit_cm_chat_sessions", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -412,6 +488,46 @@ export default function Home() {
     }
   }
 
+  function startNewConversation() {
+    setMessages([]);
+    setCurrentSessionId(null);
+    setQuestion("");
+    setError("");
+    setSidebarOpen(false);
+    window.setTimeout(() => textareaRef.current?.focus(), 50);
+  }
+
+  function loadSession(session: ChatSession) {
+    setCurrentSessionId(session.id);
+    setMessages(session.messages);
+    setError("");
+    setSidebarOpen(false);
+  }
+
+  function deleteSession(id: string) {
+    setSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      try {
+        localStorage.setItem("droit_cm_chat_sessions", JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    if (currentSessionId === id) {
+      startNewConversation();
+    }
+    showToastMessage("Discussion supprimée", "info");
+  }
+
+  function handleCopyAnswer(text: string) {
+    const clean = text.replace(/\[S\d+\]/g, "").trim();
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean);
+      showToastMessage("Réponse copiée dans le presse-papier !");
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void askQuestion(question);
@@ -421,21 +537,6 @@ export default function Home() {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       void askQuestion(question);
-    }
-  }
-
-  function startNewConversation() {
-    setMessages([]);
-    setQuestion("");
-    setError("");
-    setSidebarOpen(false);
-  }
-
-  function handleCopyAnswer(text: string) {
-    const clean = text.replace(/\[S\d+\]/g, "").trim();
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(clean);
-      showToastMessage("Réponse copiée dans le presse-papier !");
     }
   }
 
@@ -460,76 +561,134 @@ export default function Home() {
         onAskAboutArticle={(q) => void askQuestion(q)}
       />
 
-      {/* Sidebar Navigation */}
-      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+      {/* Sidebar Navigation Drawer */}
+      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`} aria-label="Menu principal et historique">
         <div className="sidebar-top">
-          <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
-            <span className="brand-mark">
-              <Scale size={20} strokeWidth={2.1} />
-            </span>
-            <span className="brand-name">droit<span>.cm</span></span>
-          </a>
-          <button
-            className="icon-button sidebar-close"
-            type="button"
-            aria-label="Fermer le menu"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X size={19} />
-          </button>
+          <div className="sidebar-brand-row">
+            <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
+              <span className="brand-mark">
+                <Scale size={20} strokeWidth={2.1} />
+              </span>
+              <span className="brand-name">droit<span>.cm</span></span>
+            </a>
+            <button
+              className="sidebar-close"
+              type="button"
+              aria-label="Fermer le menu"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={19} />
+            </button>
+          </div>
+
           <button
             className="new-chat-button"
             type="button"
             onClick={startNewConversation}
           >
-            <Plus size={17} strokeWidth={2.3} />
-            Nouvelle question
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Plus size={17} strokeWidth={2.3} />
+              <span>Nouvelle discussion</span>
+            </div>
             <span className="shortcut">⌘ K</span>
           </button>
         </div>
 
-        <div className="sidebar-section">
-          <p className="eyebrow">Explorer par sujet</p>
-          <nav className="topic-nav" aria-label="Sujets juridiques">
-            {topics.map(({ label, icon: Icon }, index) => (
+        <div className="sidebar-scrollable">
+          {/* Chat History Section */}
+          <div className="sidebar-section">
+            <p className="eyebrow">Historique des discussions</p>
+            <div className="sidebar-history">
+              {sessions.length === 0 ? (
+                <p className="sidebar-history-empty">Aucune discussion enregistrée</p>
+              ) : (
+                sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className={`history-item ${currentSessionId === s.id ? "active" : ""}`}
+                    onClick={() => loadSession(s)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="history-item-left">
+                      <MessageSquare size={14} style={{ flexShrink: 0 }} />
+                      <span className="history-title">{s.title}</span>
+                    </div>
+                    <button
+                      className="history-delete-btn"
+                      type="button"
+                      title="Supprimer la discussion"
+                      aria-label="Supprimer la discussion"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSession(s.id);
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Topics */}
+          <div className="sidebar-section">
+            <p className="eyebrow">Explorer par domaine</p>
+            <nav className="topic-nav" aria-label="Sujets juridiques">
+              {topics.map(({ label, icon: Icon }, index) => (
+                <button
+                  className="topic-link"
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    void askQuestion(
+                      [
+                        "Quels sont mes droits et recours contre les abus selon les textes camerounais ?",
+                        "Que prévoient les textes camerounais pour fournir Internet ou créer un opérateur télécom ?",
+                        "Que dit la loi camerounaise sur la cybercriminalité et la sécurité des données ?",
+                        "Quelles sont les obligations légales du commerce électronique au Cameroun ?",
+                        "Que dit la législation camerounaise sur la concurrence et les prix ?",
+                      ][index],
+                    );
+                  }}
+                >
+                  <Icon size={16} strokeWidth={1.8} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="sidebar-foot">
+          <div className="sidebar-bottom-actions">
+            <div className="sidebar-action-row">
+              <ThemeToggle />
               <button
-                className="topic-link"
-                key={label}
+                className="sidebar-util-btn"
                 type="button"
                 onClick={() => {
                   setSidebarOpen(false);
-                  void askQuestion(
-                    [
-                      "Quels sont mes droits et recours contre les abus selon les textes camerounais ?",
-                      "Que prévoient les textes camerounais pour fournir Internet ou créer un opérateur télécom ?",
-                      "Que dit la loi camerounaise sur la cybercriminalité et la sécurité des données ?",
-                      "Quelles sont les obligations légales du commerce électronique au Cameroun ?",
-                      "Que dit la législation camerounaise sur la concurrence et les prix ?",
-                    ][index],
-                  );
+                  reopenTutorial();
                 }}
+                aria-label="Revoir le guide"
               >
-                <Icon size={17} strokeWidth={1.8} />
-                <span>{label}</span>
+                <HelpCircle size={15} />
+                <span>Guide</span>
               </button>
-            ))}
-          </nav>
-        </div>
+            </div>
+            <PwaInstallPrompt />
+          </div>
 
-        <div className="sidebar-foot">
           <div className="sidebar-note">
-            <span className="note-icon"><ShieldCheck size={17} /></span>
+            <span className="note-icon"><ShieldCheck size={16} /></span>
             <div>
               <strong>43 textes officiels indexés</strong>
-              <p>Chaque réponse cite les lois, décrets et décisions de l&apos;ART.</p>
+              <small style={{ color: "var(--text-muted)" }}>Lois & décrets du Cameroun</small>
             </div>
-          </div>
-          <div className="profile-row">
-            <span className="profile-avatar">CM</span>
-            <span className="profile-copy">
-              <strong>Le droit, simplement</strong>
-              <small>Assistant Juridique · Cameroun</small>
-            </span>
           </div>
         </div>
       </aside>
@@ -546,40 +705,30 @@ export default function Home() {
       {/* Main Panel */}
       <section className="main-panel">
         <header className="topbar">
-          <div className="topbar-left">
-            <button
-              className="icon-button mobile-menu"
-              type="button"
-              aria-label="Ouvrir le menu"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu size={20} />
-            </button>
-            <span className="topbar-context">
-              <span className="status-dot" /> Assistant juridique
-            </span>
-          </div>
-          <div className="topbar-actions">
-            <PwaInstallPrompt />
-            <ThemeToggle />
-            <span className="country-tag"><span>🇨🇲</span> Cameroun</span>
-            <button
-              className="help-button"
-              type="button"
-              onClick={reopenTutorial}
-              aria-label="Aide"
-            >
-              <HelpCircle size={16} /> <span className="help-label">Aide</span>
-            </button>
-            <button
-              className="header-new-button"
-              type="button"
-              onClick={startNewConversation}
-              aria-label="Nouvelle question"
-            >
-              <Plus size={16} /> <span className="btn-text">Nouvelle question</span>
-            </button>
-          </div>
+          <button
+            className="topbar-nav-btn"
+            type="button"
+            aria-label="Historique et menu"
+            title="Historique et menu"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
+
+          <a className="topbar-brand" href="/" aria-label="Accueil Droit.cm">
+            <span>droit</span>.cm
+            <span className="status-dot" title="Assistant en ligne" />
+          </a>
+
+          <button
+            className="topbar-nav-btn"
+            type="button"
+            aria-label="Nouvelle discussion"
+            title="Nouvelle discussion"
+            onClick={startNewConversation}
+          >
+            <Plus size={22} strokeWidth={2} />
+          </button>
         </header>
 
         <div className={`conversation ${messages.length ? "conversation-active" : ""}`}>
@@ -592,7 +741,7 @@ export default function Home() {
               <h1>
                 Le droit camerounais,
                 <br />
-                <span>enfin plus clair.</span>
+                <span>en clair.</span>
               </h1>
               <p className="welcome-description">
                 Posez vos questions par écrit ou au micro et recevez des explications
@@ -606,7 +755,7 @@ export default function Home() {
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Décrivez votre situation ou posez une question juridique…"
+                  placeholder="Posez votre question juridique ou décrivez votre situation…"
                   aria-label="Votre question juridique"
                   rows={1}
                   maxLength={2000}
@@ -619,7 +768,7 @@ export default function Home() {
                       onTranscript={setQuestion}
                     />
                     <span className="composer-hint">
-                      <Sparkles size={14} /> Répond avec citations précises
+                      <Sparkles size={14} /> Citations d&apos;articles officiels
                     </span>
                   </div>
                   <button
@@ -640,106 +789,6 @@ export default function Home() {
               />
 
               {error && <p className="error-banner" role="alert">{error}</p>}
-
-              {/* Minimalist Card-Based Topic Grid */}
-              <TopicCardsGrid
-                loading={loading}
-                onSelectCard={(p) => void askQuestion(p)}
-              />
-
-              {/* 50 Questions Library Toggle */}
-              <button
-                className="question-library-toggle"
-                type="button"
-                aria-expanded={showQuestionLibrary}
-                onClick={() => setShowQuestionLibrary((current) => !current)}
-              >
-                {showQuestionLibrary ? "Masquer la bibliothèque" : "Explorer les 50 questions fréquentes"}
-                <ChevronDown className={showQuestionLibrary ? "chevron-open" : ""} size={15} />
-              </button>
-
-              {showQuestionLibrary && (
-                <section className="question-library" aria-label="Bibliothèque des questions">
-                  <div className="question-library-intro">
-                    <strong>Questions types par activité</strong>
-                    <span>Cliquez sur une question pour obtenir sa réponse fondée sur les lois en vigueur.</span>
-                  </div>
-                  <div className="question-library-filters">
-                    <input
-                      type="search"
-                      value={questionSearch}
-                      aria-label="Rechercher une question"
-                      placeholder="Rechercher parmi les 50 questions…"
-                      onChange={(event) => {
-                        setQuestionSearch(event.target.value);
-                        setQuestionPage(0);
-                      }}
-                    />
-                    <select
-                      value={questionCategory}
-                      aria-label="Filtrer les questions par activité"
-                      onChange={(event) => {
-                        setQuestionCategory(event.target.value);
-                        setQuestionPage(0);
-                      }}
-                    >
-                      <option>Toutes les catégories</option>
-                      {[...new Set(businessQuestionCategories.map(({ category }) => category))].map(
-                        (category) => <option key={category}>{category}</option>,
-                      )}
-                    </select>
-                  </div>
-
-                  {visibleBusinessQuestions.length > 0 ? (
-                    <div className="suggestion-grid question-library-grid">
-                      {visibleBusinessQuestions.map(({ icon: Icon, category, prompt }) => (
-                        <button
-                          className="suggestion-card"
-                          key={prompt}
-                          type="button"
-                          onClick={() => void askQuestion(prompt)}
-                        >
-                          <span className="suggestion-icon cyan"><Icon size={17} strokeWidth={1.8} /></span>
-                          <span className="suggestion-copy">
-                            <strong>{category}</strong>
-                            <small>{prompt}</small>
-                          </span>
-                          <ArrowLeft className="suggestion-arrow" size={15} />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="question-library-empty">Aucune question ne correspond à votre recherche.</p>
-                  )}
-
-                  <div className="question-library-pagination">
-                    <span>
-                      {filteredBusinessQuestions.length === 0
-                        ? "0 question"
-                        : `${questionPage * questionsPerPage + 1}–${Math.min(
-                            (questionPage + 1) * questionsPerPage,
-                            filteredBusinessQuestions.length,
-                          )} sur ${filteredBusinessQuestions.length} questions`}
-                    </span>
-                    <div>
-                      <button
-                        type="button"
-                        disabled={questionPage === 0}
-                        onClick={() => setQuestionPage((page) => Math.max(0, page - 1))}
-                      >
-                        Précédent
-                      </button>
-                      <button
-                        type="button"
-                        disabled={(questionPage + 1) * questionsPerPage >= filteredBusinessQuestions.length}
-                        onClick={() => setQuestionPage((page) => page + 1)}
-                      >
-                        Suivant
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
           ) : (
             <div className="message-list">

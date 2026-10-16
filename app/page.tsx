@@ -85,6 +85,9 @@ type Citation = {
   page: number;
   excerpt: string;
   file: string;
+  articles: string[];
+  isRecueil: boolean;
+  legalTitle: string | null;
 };
 
 type Message = {
@@ -320,7 +323,14 @@ export default function Home() {
             "excerpt" in citation &&
             typeof citation.excerpt === "string" &&
             "file" in citation &&
-            typeof citation.file === "string",
+            typeof citation.file === "string" &&
+            "articles" in citation &&
+            Array.isArray(citation.articles) &&
+            citation.articles.every((article: unknown) => typeof article === "string") &&
+            "isRecueil" in citation &&
+            typeof citation.isRecueil === "boolean" &&
+            "legalTitle" in citation &&
+            (typeof citation.legalTitle === "string" || citation.legalTitle === null),
         )
       ) {
         throw new Error("Les sources reçues sont invalides. Réessayez.");
@@ -667,10 +677,24 @@ export default function Home() {
                             >
                               <span className="source-file-icon"><FileText size={16} /></span>
                               <span className="source-copy">
-                                <strong>{citation.title}</strong>
-                                <small>{citation.category} · page {citation.page}</small>
+                                <span className="source-type-label">
+                                  {citation.isRecueil ? "Extrait d’un recueil" : citation.category}
+                                </span>
+                                <strong>{citation.legalTitle ?? citation.title}</strong>
+                                {citation.isRecueil && citation.legalTitle && (
+                                  <small>Recueil source : {citation.title}</small>
+                                )}
+                                {citation.isRecueil && !citation.legalTitle && (
+                                  <small>Intitulé de la loi non repéré dans cet extrait</small>
+                                )}
+                                <small>Page PDF {citation.page}</small>
+                                <small>
+                                  {citation.articles.length > 0
+                                    ? `Article${citation.articles.length > 1 ? "s" : ""} repéré${citation.articles.length > 1 ? "s" : ""} : ${citation.articles.join(", ")}`
+                                    : "Aucun numéro d’article repéré dans cet extrait"}
+                                </small>
+                                <span className="source-open-link">Consulter le passage <ExternalLink size={12} /></span>
                               </span>
-                              <ExternalLink size={14} className="source-external" />
                             </a>
                           ))}
                         </div>

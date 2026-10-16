@@ -1043,29 +1043,43 @@ textarea:focus-visible {
   display: grid;
   min-width: 0;
   flex: 1;
-  gap: 4px;
+  gap: 5px;
+}
+
+.source-type-label {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eff4ef;
+  color: #5e7862;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .source-copy strong {
-  overflow: hidden;
   color: #4f5d52;
-  font-size: 9.5px;
+  font-size: 14px;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
 }
 
 .source-copy small {
-  overflow: hidden;
   color: #9ba39d;
-  font-size: 8.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.source-external {
-  flex: 0 0 auto;
-  color: #aab2ac;
+.source-open-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  color: #54745b;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .show-sources-button {
@@ -1306,6 +1320,7 @@ textarea:focus-visible {
   }
 
   .suggestion-grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: 7px;
   }
 
@@ -1429,7 +1444,22 @@ textarea:focus-visible {
 .no-sources-note,
 .legal-footnote,
 .keyboard-hint {
-  font-size: 12px;
+  font-size: 14px;
+}
+
+.welcome-description,
+.composer textarea,
+.message-user .message-text,
+.message-text {
+  font-size: 16px;
+}
+
+.suggestion-card {
+  min-height: 84px;
+}
+
+.suggestion-copy {
+  gap: 6px;
 }
 
 .welcome-badge,
@@ -1453,18 +1483,39 @@ textarea:focus-visible {
 }
 
 .suggestion-copy small {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
-.message-user .message-text,
-.message-text {
-  font-size: 14px;
+.source-copy strong,
+.source-copy small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .message-text h3 {
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .source-marker {
-  font-size: 11px;
+  font-size: 12px;
+}
+
+@media (max-width: 680px) {
+  .suggestion-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suggestion-card {
+    min-height: 76px;
+  }
+}
+
+@media (max-width: 380px) {
+  .welcome-description,
+  .composer textarea,
+  .message-user .message-text,
+  .message-text {
+    font-size: 15px;
+  }
 }

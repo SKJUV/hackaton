@@ -1,0 +1,19 @@
+{
+  "name": "Droit.cm — Assistant Juridique Cameroun",
+  "short_name": "Droit.cm",
+  "description": "Assistant juridique intelligent pour le Cameroun, basé sur 43 textes de lois officiels.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "business", "legal"]
+}

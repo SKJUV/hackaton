@@ -21,6 +21,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState, type ReactNode }
 
 // Modular UI Components
 import { ArticleDrawer, type DrawerData } from "../components/ui/ArticleDrawer";
+import { PwaInstallPrompt } from "../components/ui/PwaInstallPrompt";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { Toast, type ToastMessage } from "../components/ui/Toast";
 
@@ -559,6 +560,7 @@ export default function Home() {
             </span>
           </div>
           <div className="topbar-actions">
+            <PwaInstallPrompt />
             <ThemeToggle />
             <span className="country-tag"><span>🇨🇲</span> Cameroun</span>
             <button
@@ -567,14 +569,15 @@ export default function Home() {
               onClick={reopenTutorial}
               aria-label="Aide"
             >
-              <HelpCircle size={16} /> Aide
+              <HelpCircle size={16} /> <span className="help-label">Aide</span>
             </button>
             <button
               className="header-new-button"
               type="button"
               onClick={startNewConversation}
+              aria-label="Nouvelle question"
             >
-              <Plus size={16} /> Nouvelle question
+              <Plus size={16} /> <span className="btn-text">Nouvelle question</span>
             </button>
           </div>
         </header>

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useTempDb } from "./setup-db";
-import { detectIntents, extractPurpose } from "@/lib/agent/demo-planner";
+import { detectIntents, extractNeed, extractPurpose } from "@/lib/agent/demo-planner";
 import { runAgent } from "@/lib/agent/runner";
 import { TOOLS } from "@/lib/agent/tools";
 import { getSnapshot } from "@/lib/workspace/service";
@@ -18,6 +18,12 @@ describe("agent", () => {
 
   it("extrait l'objet d'un email", () => {
     expect(extractPurpose("Envoie un mail à x@y.com pour demander un rendez-vous")).toBe("demander un rendez-vous");
+  });
+
+  it("extrait le besoin d'une demande de devis", () => {
+    const r = extractNeed("Trouve des fournisseurs de motos de livraison et demande des devis pour 10 motos, puis dis-moi le régime");
+    expect(r.search).toBe("motos de livraison");
+    expect(r.need).toBe("motos de livraison — 10 motos");
   });
 
   it("tous les outils ont un schéma objet et une description", () => {

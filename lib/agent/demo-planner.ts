@@ -56,6 +56,15 @@ function extractDate(message: string): string | undefined {
   return undefined;
 }
 
+/** « Trouve des fournisseurs de motos … et demande des devis pour 10 motos, puis … » → « motos de livraison — 10 motos ». */
+export function extractNeed(message: string): { search: string; need: string } {
+  const stop = String.raw`(?=\s+(?:et|puis|ensuite|avant|afin)\b|[,.;!?]|$)`;
+  const supplierPart = message.match(new RegExp(String.raw`(?:fournisseurs?|prestataires?)\s+(?:de|d['’]|pour|en)\s*(.+?)` + stop, "i"))?.[1]?.trim();
+  const quotePart = message.match(new RegExp(String.raw`devis\s+(?:pour|de|d['’]|concernant)\s*(.+?)` + stop, "i"))?.[1]?.trim();
+  const need = [supplierPart, quotePart].filter(Boolean).join(" — ") || message.trim();
+  return { search: supplierPart || quotePart || message, need: need.slice(0, 200) };
+}
+
 /** « Envoie un mail à x@y.com pour demander un RDV » → « demander un RDV ». */
 export function extractPurpose(message: string): string {
   const cleaned = message.replace(/[^\s@<>,;()]+@[^\s@<>,;()]+\.[a-z]{2,}/gi, "").replace(/\s+/g, " ").trim();
@@ -87,14 +96,14 @@ export async function runDemoPlanner(company: Company, message: string) {
   for (const intent of detectIntents(message)) {
     switch (intent) {
       case "devis": {
-        const found = await call("lister_fournisseurs", { besoin: message });
+        const { search, need } = extractNeed(message);
+        const found = await call("lister_fournisseurs", { besoin: search });
         const list = (found?.data as { id: string; nom: string }[] | undefined) ?? [];
         const top = list.slice(0, 3);
         if (!top.length) {
           lines.push("Je n'ai trouvé aucun fournisseur correspondant dans l'annuaire.");
           break;
         }
-        const need = message.replace(/^(peux-tu|pourrais-tu|merci de)\s+/i, "").slice(0, 200);
         const r = await call("demander_devis", { fournisseur_ids: top.map((s) => s.id), besoin: need });
         if (r) lines.push(`**Fournisseurs contactés (après votre validation)** : ${top.map((s) => s.nom).join(", ")}. ${r.summary}. Validez-les dans l'onglet **Approbations** ; je suivrai les réponses et préparerai les relances.`);
         break;

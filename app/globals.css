@@ -867,7 +867,11 @@ select:focus-visible {
 .toolbar-followups {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .followup-label {
@@ -884,20 +888,30 @@ select:focus-visible {
 .followup-chips-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .followup-chip {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
   background: var(--bg-card);
   border: 1px dashed var(--border);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 12.5px;
   text-align: left;
+  line-height: 1.45;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
   transition: all var(--transition-fast);
 }
 
@@ -909,9 +923,16 @@ select:focus-visible {
   transform: translateY(-1px);
 }
 
+.followup-chip span {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .followup-icon {
   color: var(--accent);
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* ===== ARTICLE DRAWER ===== */
@@ -1649,10 +1670,17 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
   max-width: 900px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
+}
+
+.conversation.conversation-active {
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 160px);
 }
 
 .welcome {
@@ -1788,8 +1816,12 @@ select:focus-visible {
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding-bottom: 30px;
+  gap: 20px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 160px);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .conversation-heading {
@@ -1799,6 +1831,8 @@ select:focus-visible {
   margin-bottom: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .back-home {
@@ -1822,6 +1856,10 @@ select:focus-visible {
   display: flex;
   gap: 14px;
   animation: message-in 300ms var(--ease-spring) both;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 @keyframes message-in {
@@ -1839,18 +1877,26 @@ select:focus-visible {
   border-radius: var(--radius-lg) var(--radius-lg) 2px var(--radius-lg);
   padding: 14px 18px;
   max-width: 82%;
+  min-width: 0;
+  box-sizing: border-box;
   font-size: 15px;
   line-height: 1.5;
   box-shadow: 0 4px 14px var(--accent-glow);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-assistant {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .message-avatar {
   width: 36px;
   height: 36px;
+  min-width: 36px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
   display: flex;
@@ -1863,7 +1909,10 @@ select:focus-visible {
 }
 
 .message-assistant .message-content {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1872,6 +1921,8 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-author {
@@ -1881,6 +1932,8 @@ select:focus-visible {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .answer-source-label {
@@ -1893,29 +1946,171 @@ select:focus-visible {
   background: var(--accent-soft);
   padding: 2px 8px;
   border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
 .message-text {
   font-size: 15px;
   line-height: 1.65;
   color: var(--text-primary);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-.message-text p { margin: 0 0 12px; }
-.message-text p:last-child { margin-bottom: 0; }
+.message-text p {
+  margin: 0 0 12px;
+  line-height: 1.65;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.message-text p:last-child {
+  margin-bottom: 0;
+}
+
 .message-text h3 {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
   margin: 16px 0 8px;
   color: var(--text-primary);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
-.message-text ul, .message-text ol {
+
+.message-text ul,
+.message-text ol {
   margin: 8px 0 14px;
   padding-left: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
+
 .message-text li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  line-height: 1.6;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.message-text li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-blockquote {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.chat-code-block {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  color: var(--text-accent);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inline-code {
+  padding: 2px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--accent);
+  word-break: break-word;
+}
+
+/* ===== RESPONSIVE MARKDOWN TABLES ===== */
+.table-responsive-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 14px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.chat-markdown-table {
+  width: 100%;
+  min-width: 440px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.chat-markdown-table th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.chat-markdown-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+  font-size: 13px;
+}
+
+[data-theme="light"] .chat-markdown-table td {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.chat-markdown-table tr:last-child td {
+  border-bottom: none;
+}
+
+.chat-markdown-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] .chat-markdown-table tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.02);
 }
 
 .source-marker {
@@ -2133,35 +2328,90 @@ select:focus-visible {
     border-radius: 50%;
   }
   .conversation {
-    padding: 16px 12px;
+    padding: 14px 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
-  .welcome h1 {
-    font-size: clamp(26px, 7vw, 36px);
+  .conversation.conversation-active {
+    padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 160px);
   }
-  .welcome-description {
-    font-size: 14.5px;
-    margin-bottom: 20px;
+  .message-list {
+    padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 160px);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
-  .composer {
+  .message {
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+  .message-assistant {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .message-assistant .message-content {
     padding: 12px 14px;
-    border-radius: var(--radius-lg);
+    flex: 1 1 0%;
+    width: calc(100% - 42px);
+    max-width: calc(100% - 42px);
+    min-width: 0;
+    box-sizing: border-box;
   }
-  .cards-modular-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .message-text {
+    font-size: 14.5px;
+    line-height: 1.6;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
-  .modular-card {
-    padding: 16px;
+  .message-text ul,
+  .message-text ol {
+    padding-left: 16px;
+    margin: 6px 0 10px;
+  }
+  .message-text li {
+    margin-bottom: 6px;
+  }
+  .message-user .message-content {
+    max-width: 88%;
+    font-size: 14px;
+    padding: 10px 14px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .table-responsive-wrapper {
+    margin: 10px 0;
+    border-radius: var(--radius-sm);
+  }
+  .chat-markdown-table {
+    min-width: 360px;
+    font-size: 12.5px;
+  }
+  .chat-markdown-table th,
+  .chat-markdown-table td {
+    padding: 8px 10px;
   }
   .source-cards {
     grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
-  .message-assistant .message-content {
-    padding: 14px 16px;
-  }
-  .message-user .message-content {
-    max-width: 90%;
-    font-size: 14px;
+  .source-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
   .question-library-filters {
     flex-direction: column;
@@ -2172,7 +2422,7 @@ select:focus-visible {
     width: 100%;
   }
   .bottom-composer-wrap {
-    padding: 12px 12px calc(env(safe-area-inset-bottom, 12px) + 6px);
+    padding: 10px 10px calc(env(safe-area-inset-bottom, 12px) + 6px);
   }
 }
 

@@ -184,9 +184,16 @@ function renderInline(
   citations?: Citation[],
   onOpenCitation?: (citation: Citation) => void,
 ): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[S\d+\])/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code key={index} className="inline-code">
+          {part.slice(1, -1)}
+        </code>
+      );
     }
     const citationMatch = part.match(/^\[S(\d+)\]$/);
     if (citationMatch) {
@@ -218,6 +225,26 @@ function renderInline(
   });
 }
 
+function parseTableCells(rowLine: string): string[] {
+  let cleaned = rowLine.trim();
+  if (cleaned.startsWith("|")) cleaned = cleaned.slice(1);
+  if (cleaned.endsWith("|")) cleaned = cleaned.slice(0, -1);
+  return cleaned.split("|").map((cell) => cell.trim());
+}
+
+function isTableSeparator(line: string): boolean {
+  const trimmed = line.trim();
+  return (
+    /^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(trimmed) ||
+    /^\|?(\s*-{2,}\s*\|)+\s*-{2,}\s*\|?$/.test(trimmed)
+  );
+}
+
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.includes("|", 1);
+}
+
 function formatAnswer(
   text: string,
   citations?: Citation[],
@@ -234,36 +261,150 @@ function formatAnswer(
       continue;
     }
 
+    // 1. Headings (#, ##, ###)
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     if (heading) {
-      blocks.push(<h3 key={index}>{renderInline(heading[2], citations, onOpenCitation)}</h3>);
+      blocks.push(
+        <h3 key={`h-${index}`}>
+          {renderInline(heading[2], citations, onOpenCitation)}
+        </h3>
+      );
       index += 1;
       continue;
     }
 
+    // 2. Fenced Code Blocks (``` ... ```)
+    if (line.startsWith("```")) {
+      const startIdx = index;
+      index += 1;
+      const codeLines: string[] = [];
+      while (index < lines.length && !lines[index].trim().startsWith("```")) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length && lines[index].trim().startsWith("```")) {
+        index += 1;
+      }
+      blocks.push(
+        <pre className="chat-code-block" key={`code-${startIdx}`}>
+          <code>{codeLines.join("\n")}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    // 3. Blockquotes (> ...)
+    if (line.startsWith(">")) {
+      const quoteStart = index;
+      const quoteLines: string[] = [];
+      while (index < lines.length && lines[index].trim().startsWith(">")) {
+        quoteLines.push(lines[index].trim().replace(/^>\s?/, ""));
+        index += 1;
+      }
+      blocks.push(
+        <blockquote className="chat-blockquote" key={`quote-${quoteStart}`}>
+          {renderInline(quoteLines.join(" "), citations, onOpenCitation)}
+        </blockquote>
+      );
+      continue;
+    }
+
+    // 4. Markdown Tables (| Col 1 | Col 2 |)
+    if (isTableRow(line)) {
+      const tableStart = index;
+      const tableLines: string[] = [];
+      while (index < lines.length && isTableRow(lines[index])) {
+        tableLines.push(lines[index].trim());
+        index += 1;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerLine = tableLines[0];
+        let bodyLines = tableLines.slice(1);
+        if (bodyLines.length > 0 && isTableSeparator(bodyLines[0])) {
+          bodyLines = bodyLines.slice(1);
+        }
+
+        const headers = parseTableCells(headerLine);
+        blocks.push(
+          <div className="table-responsive-wrapper" key={`table-${tableStart}`}>
+            <table className="chat-markdown-table">
+              <thead>
+                <tr>
+                  {headers.map((h, hIdx) => (
+                    <th key={hIdx}>{renderInline(h, citations, onOpenCitation)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bodyLines.map((bRow, rIdx) => {
+                  if (isTableSeparator(bRow)) return null;
+                  const cells = parseTableCells(bRow);
+                  return (
+                    <tr key={rIdx}>
+                      {cells.map((cell, cIdx) => (
+                        <td key={cIdx}>{renderInline(cell, citations, onOpenCitation)}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // 5. Lists (unordered: -, *, • / ordered: 1., 2.)
     const listItem = line.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
     if (listItem) {
       const ordered = /^\d+[.)]/.test(line);
       const items: ReactNode[] = [];
+      const listStart = index;
       while (index < lines.length) {
         const match = lines[index].trim().match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
         if (!match || /^\d+[.)]/.test(lines[index].trim()) !== ordered) break;
-        items.push(<li key={index}>{renderInline(match[1], citations, onOpenCitation)}</li>);
+        items.push(
+          <li key={`li-${index}`}>
+            {renderInline(match[1], citations, onOpenCitation)}
+          </li>
+        );
         index += 1;
       }
-      blocks.push(ordered ? <ol key={`list-${index}`}>{items}</ol> : <ul key={`list-${index}`}>{items}</ul>);
+      blocks.push(
+        ordered ? (
+          <ol key={`list-${listStart}`}>{items}</ol>
+        ) : (
+          <ul key={`list-${listStart}`}>{items}</ul>
+        )
+      );
       continue;
     }
 
+    // 6. Regular Paragraphs
     const paragraph = [line];
+    const pStart = index;
     index += 1;
     while (index < lines.length && lines[index].trim()) {
       const nextLine = lines[index].trim();
-      if (/^(#{1,3})\s+/.test(nextLine) || /^(?:[-*•]|\d+[.)])\s+/.test(nextLine)) break;
+      if (
+        /^(#{1,3})\s+/.test(nextLine) ||
+        /^(?:[-*•]|\d+[.)])\s+/.test(nextLine) ||
+        isTableRow(nextLine) ||
+        nextLine.startsWith(">") ||
+        nextLine.startsWith("```")
+      ) {
+        break;
+      }
       paragraph.push(nextLine);
       index += 1;
     }
-    blocks.push(<p key={index}>{renderInline(paragraph.join(" "), citations, onOpenCitation)}</p>);
+    blocks.push(
+      <p key={`p-${pStart}`}>
+        {renderInline(paragraph.join(" "), citations, onOpenCitation)}
+      </p>
+    );
   }
 
   return blocks;

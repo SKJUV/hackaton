@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  ArrowRight,
   ArrowUp,
   BookOpen,
   ChevronDown,
@@ -12,76 +11,30 @@ import {
   Globe2,
   HelpCircle,
   Menu,
-  MessageCircle,
   Plus,
   Scale,
-  Search,
   ShieldCheck,
   Sparkles,
   X,
-  Zap,
 } from "lucide-react";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState, type ReactNode } from "react";
 
-/* ===== MARKDOWN RENDERING ===== */
-function renderInline(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-    if (/^\[S\d+\]$/.test(part)) {
-      return <span className="source-marker" key={index}>{part}</span>;
-    }
-    return part;
-  });
-}
+// Modular UI Components
+import { ArticleDrawer, type DrawerData } from "../components/ui/ArticleDrawer";
+import { ThemeToggle } from "../components/ui/ThemeToggle";
+import { Toast, type ToastMessage } from "../components/ui/Toast";
 
-function formatAnswer(text: string): ReactNode[] {
-  const lines = text.split("\n");
-  const blocks: ReactNode[] = [];
-  let index = 0;
+// Motion & Onboarding Components
+import { MobileFullscreenOnboarding } from "../components/onboarding/MobileFullscreenOnboarding";
+import { SplashScreen } from "../components/onboarding/SplashScreen";
 
-  while (index < lines.length) {
-    const line = lines[index].trim();
-    if (!line) {
-      index += 1;
-      continue;
-    }
+// Home & Voice Components
+import { QuickActionChips } from "../components/home/QuickActionChips";
+import { TopicCardsGrid } from "../components/home/TopicCardsGrid";
+import { VoiceInputButton } from "../components/voice/VoiceInputButton";
 
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      blocks.push(<h3 key={index}>{renderInline(heading[2])}</h3>);
-      index += 1;
-      continue;
-    }
-
-    const listItem = line.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
-    if (listItem) {
-      const ordered = /^\d+[.)]/.test(line);
-      const items: ReactNode[] = [];
-      while (index < lines.length) {
-        const match = lines[index].trim().match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
-        if (!match || /^\d+[.)]/.test(lines[index].trim()) !== ordered) break;
-        items.push(<li key={index}>{renderInline(match[1])}</li>);
-        index += 1;
-      }
-      blocks.push(ordered ? <ol key={`list-${index}`}>{items}</ol> : <ul key={`list-${index}`}>{items}</ul>);
-      continue;
-    }
-
-    const paragraph = [line];
-    index += 1;
-    while (index < lines.length && lines[index].trim()) {
-      const nextLine = lines[index].trim();
-      if (/^(#{1,3})\s+/.test(nextLine) || /^(?:[-*•]|\d+[.)])\s+/.test(nextLine)) break;
-      paragraph.push(nextLine);
-      index += 1;
-    }
-    blocks.push(<p key={index}>{renderInline(paragraph.join(" "))}</p>);
-  }
-
-  return blocks;
-}
+// Chat Components
+import { MessageActions } from "../components/chat/MessageActions";
 
 /* ===== TYPES ===== */
 type Citation = {
@@ -99,72 +52,16 @@ type Message = {
   citations?: Citation[];
 };
 
-/* ===== ONBOARDING STEPS ===== */
-const onboardingSteps = [
-  {
-    icon: Scale,
-    title: "Bienvenue sur Droit.cm",
-    description:
-      "Votre assistant juridique intelligent pour le Cameroun. Posez vos questions en langage simple et obtenez des réponses sourcées, directement tirées des textes officiels.",
-  },
-  {
-    icon: Search,
-    title: "Comment ça marche ?",
-    features: [
-      {
-        icon: MessageCircle,
-        tint: "green" as const,
-        text: "Posez votre question en mots simples, comme à un ami juriste",
-      },
-      {
-        icon: BookOpen,
-        tint: "amber" as const,
-        text: "L'IA recherche dans 43 actes officiels et vous cite les sources",
-      },
-      {
-        icon: ShieldCheck,
-        tint: "violet" as const,
-        text: "Chaque réponse mentionne les articles de loi consultés",
-      },
-    ],
-  },
-  {
-    icon: Zap,
-    title: "Prêt à commencer !",
-    description:
-      "Utilisez les suggestions rapides ou tapez directement votre question. Explorez les thèmes dans le menu latéral pour naviguer par domaine juridique.",
-  },
+/* ===== SIDEBAR TOPICS ===== */
+const topics = [
+  { label: "Droits du consommateur", icon: ShieldCheck },
+  { label: "Télécommunications & FAI", icon: Globe2 },
+  { label: "Cybersécurité & Données", icon: ShieldCheck },
+  { label: "Commerce électronique", icon: BookOpen },
+  { label: "Concurrence & Marché", icon: Gavel },
 ];
 
-/* ===== STARTER SUGGESTIONS ===== */
-const starterSuggestions = [
-  {
-    icon: ShieldCheck,
-    title: "Droits du consommateur",
-    prompt: "Quels sont mes droits si un opérateur me facture un service non demandé ?",
-    tint: "mint" as const,
-  },
-  {
-    icon: Globe2,
-    title: "Cybersécurité",
-    prompt: "Que dit la loi camerounaise sur la cybercriminalité et mes données ?",
-    tint: "lavender" as const,
-  },
-  {
-    icon: MessageCircle,
-    title: "Téléphonie & internet",
-    prompt: "Quels recours ai-je si mon réseau téléphonique ne fonctionne pas ?",
-    tint: "peach" as const,
-  },
-  {
-    icon: BookOpen,
-    title: "Commerce électronique",
-    prompt: "Explique-moi simplement les règles du commerce électronique au Cameroun.",
-    tint: "blue" as const,
-  },
-];
-
-/* ===== BUSINESS QUESTIONS ===== */
+/* ===== 50 BUSINESS QUESTIONS ===== */
 const businessQuestionCategories = [
   {
     title: "Télécommunications et Internet",
@@ -237,8 +134,8 @@ const businessQuestionCategories = [
     icon: ShieldCheck,
     questions: [
       "Je veux créer un opérateur Internet et utiliser les infrastructures d'un opérateur déjà établi. Comment demander l'accès ou l'interconnexion ?",
-      "Je veux lancer une entreprise de télécommunications avec des forfaits prépayés. Quelles obligations d'identification des abonnés dois-je prévoir, selon les règles compilées en 2023 ?",
-      "Je veux lancer un service mobile qui fonctionne aussi sur le réseau d'autres opérateurs. Quelles règles d'itinérance nationale dois-je vérifier, notamment dans la décision de l'ART du 11 mars 2024 ?",
+      "Je veux lancer une entreprise de télécommunications avec des forfaits prépayés. Quelles obligations d'identification des abonnés dois-je prévoir ?",
+      "Je veux lancer un service mobile qui fonctionne aussi sur le réseau d'autres opérateurs. Quelles règles d'itinérance nationale vérifier ?",
       "Je veux vendre des cartes SIM dans des points de vente partenaires. Quelles obligations d'identification des abonnés dois-je respecter ?",
       "Je veux proposer des forfaits téléphoniques au public. Quelles règles encadrent l'information des abonnés et les tarifs ?",
       "Je veux créer un service de télécommunications et traiter les réclamations de mes abonnés. Quels textes du corpus peuvent s'appliquer ?",
@@ -251,10 +148,10 @@ const businessQuestionCategories = [
     questions: [
       "Je veux créer une entreprise de services numériques sans exercer une activité réservée à un opérateur autorisé. Comment vérifier le régime applicable ?",
       "Je veux lancer un nouveau service qui combine Internet, téléphonie et vente d'équipements. Quelles autorisations pourraient concerner chaque activité ?",
-      "Je veux développer une jeune entreprise dans le secteur des postes ou des télécommunications. Quels textes du corpus dois-je consulter en priorité selon mon activité ?",
+      "Je veux développer une jeune entreprise dans le secteur des postes ou des télécommunications. Quels textes du corpus dois-je consulter en priorité ?",
       "Je veux lancer une activité télécom sans construire mon propre réseau. Comment déterminer si une licence, une concession ou une déclaration est nécessaire ?",
-      "Je veux créer une entreprise qui fournit un service au public sur un réseau de communications électroniques. Quel régime d'exploitation dois-je vérifier ?",
-      "Je veux créer une entreprise dans le secteur postal. Comment savoir si mon activité relève d'une licence, d'une concession ou d'un autre régime ?",
+      "Je veux créer une entreprise qui fournit un service au public sur un réseau de communications électroniques. Quel régime d'exploitation vérifier ?",
+      "Je veux créer une entreprise dans le secteur postal. Comment savoir si mon activité relève d'une licence ou d'une concession ?",
       "Je veux développer une activité réglementée dans les TIC. Comment distinguer les autorisations sectorielles des formalités générales de création d'entreprise ?",
     ],
   },
@@ -266,82 +163,100 @@ const businessQuestionCategories = [
   })),
 );
 
-/* ===== SIDEBAR TOPICS ===== */
-const topics = [
-  { label: "Droits du consommateur", icon: ShieldCheck },
-  { label: "Télécommunications", icon: Globe2 },
-  { label: "Cybercriminalité", icon: ShieldCheck },
-  { label: "Commerce électronique", icon: BookOpen },
-  { label: "Concurrence", icon: Gavel },
-];
-
-/* ===== ONBOARDING COMPONENT ===== */
-function Onboarding({ onComplete }: { onComplete: () => void }) {
-  const [step, setStep] = useState(0);
-  const current = onboardingSteps[step];
-  const Icon = current.icon;
-
-  return (
-    <div className="onboarding-overlay">
-      <div className="onboarding-modal">
-        <div className="onboarding-step-indicator">
-          {onboardingSteps.map((_, i) => (
-            <span
-              key={i}
-              className={`step-dot ${i === step ? "active" : i < step ? "done" : ""}`}
-            />
-          ))}
-        </div>
-
-        <span className="onboarding-icon">
-          <Icon size={26} strokeWidth={1.8} />
+/* ===== INLINE MARKDOWN PARSER ===== */
+function renderInline(
+  text: string,
+  citations?: Citation[],
+  onOpenCitation?: (citation: Citation) => void,
+): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    const citationMatch = part.match(/^\[S(\d+)\]$/);
+    if (citationMatch) {
+      const citIndex = parseInt(citationMatch[1], 10) - 1;
+      const matchedCitation = citations && citations[citIndex];
+      return (
+        <span
+          className="source-marker"
+          key={index}
+          role="button"
+          tabIndex={0}
+          title={matchedCitation ? `Consulter ${matchedCitation.title} (Page ${matchedCitation.page})` : "Consulter la source"}
+          onClick={() => {
+            if (matchedCitation && onOpenCitation) {
+              onOpenCitation(matchedCitation);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && matchedCitation && onOpenCitation) {
+              onOpenCitation(matchedCitation);
+            }
+          }}
+        >
+          {part}
         </span>
-
-        <h2>{current.title}</h2>
-
-        {"description" in current && <p>{current.description}</p>}
-
-        {"features" in current && current.features != null && (
-          <ul className="onboarding-feature-list">
-            {current.features.map((feature, i) => {
-              const FIcon = feature.icon;
-              return (
-                <li className="onboarding-feature" key={i}>
-                  <span className={`onboarding-feature-icon ${feature.tint}`}>
-                    <FIcon size={18} strokeWidth={1.8} />
-                  </span>
-                  <span>{feature.text}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="onboarding-actions">
-          <button className="onboarding-skip" type="button" onClick={onComplete}>
-            Passer
-          </button>
-          {step < onboardingSteps.length - 1 ? (
-            <button
-              className="onboarding-next"
-              type="button"
-              onClick={() => setStep(step + 1)}
-            >
-              Suivant <ArrowRight size={15} />
-            </button>
-          ) : (
-            <button className="onboarding-next" type="button" onClick={onComplete}>
-              C&apos;est parti ! <Sparkles size={15} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+      );
+    }
+    return part;
+  });
 }
 
-/* ===== MAIN PAGE ===== */
+function formatAnswer(
+  text: string,
+  citations?: Citation[],
+  onOpenCitation?: (citation: Citation) => void,
+): ReactNode[] {
+  const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      blocks.push(<h3 key={index}>{renderInline(heading[2], citations, onOpenCitation)}</h3>);
+      index += 1;
+      continue;
+    }
+
+    const listItem = line.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+    if (listItem) {
+      const ordered = /^\d+[.)]/.test(line);
+      const items: ReactNode[] = [];
+      while (index < lines.length) {
+        const match = lines[index].trim().match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+        if (!match || /^\d+[.)]/.test(lines[index].trim()) !== ordered) break;
+        items.push(<li key={index}>{renderInline(match[1], citations, onOpenCitation)}</li>);
+        index += 1;
+      }
+      blocks.push(ordered ? <ol key={`list-${index}`}>{items}</ol> : <ul key={`list-${index}`}>{items}</ul>);
+      continue;
+    }
+
+    const paragraph = [line];
+    index += 1;
+    while (index < lines.length && lines[index].trim()) {
+      const nextLine = lines[index].trim();
+      if (/^(#{1,3})\s+/.test(nextLine) || /^(?:[-*•]|\d+[.)])\s+/.test(nextLine)) break;
+      paragraph.push(nextLine);
+      index += 1;
+    }
+    blocks.push(<p key={index}>{renderInline(paragraph.join(" "), citations, onOpenCitation)}</p>);
+  }
+
+  return blocks;
+}
+
 export default function Home() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -352,7 +267,12 @@ export default function Home() {
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionCategory, setQuestionCategory] = useState("Toutes les catégories");
   const [questionPage, setQuestionPage] = useState(0);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Drawer & Toast State
+  const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -368,17 +288,24 @@ export default function Home() {
   );
 
   useEffect(() => {
+    // Check onboarding status
     const seen = localStorage.getItem("droit-cm-onboarded");
-    if (!seen) setShowOnboarding(true);
+    if (!seen) {
+      setShowOnboarding(true);
+    }
   }, []);
 
-  function completeOnboarding() {
+  function handleCompleteOnboarding() {
     setShowOnboarding(false);
     localStorage.setItem("droit-cm-onboarded", "1");
   }
 
   function reopenTutorial() {
     setShowOnboarding(true);
+  }
+
+  function showToastMessage(text: string, type: "success" | "info" | "error" = "success") {
+    setToast({ id: String(Date.now()), text, type });
   }
 
   useEffect(() => {
@@ -391,6 +318,18 @@ export default function Home() {
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
   }, [question]);
+
+  function openArticleDrawer(citation: Citation) {
+    setSelectedDrawerData({
+      id: citation.id,
+      title: citation.title,
+      category: citation.category,
+      page: citation.page,
+      excerpt: citation.excerpt,
+      file: citation.file,
+    });
+    setIsDrawerOpen(true);
+  }
 
   async function askQuestion(value: string) {
     const trimmed = value.trim();
@@ -454,6 +393,7 @@ export default function Home() {
       ) {
         throw new Error("Les sources reçues sont invalides. Réessayez.");
       }
+
       const citations = data.citations;
       setMessages((current) => [
         ...current,
@@ -490,10 +430,36 @@ export default function Home() {
     setSidebarOpen(false);
   }
 
+  function handleCopyAnswer(text: string) {
+    const clean = text.replace(/\[S\d+\]/g, "").trim();
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean);
+      showToastMessage("Réponse copiée dans le presse-papier !");
+    }
+  }
+
   return (
     <main className="app-shell">
-      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+      {/* 1. Splash Screen Animation */}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
+      {/* 2. Fullscreen Mobile & Desktop Onboarding */}
+      {showOnboarding && (
+        <MobileFullscreenOnboarding onComplete={handleCompleteOnboarding} />
+      )}
+
+      {/* 3. Toast Notifications */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
+
+      {/* 4. Article Drawer */}
+      <ArticleDrawer
+        data={selectedDrawerData}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onAskAboutArticle={(q) => void askQuestion(q)}
+      />
+
+      {/* Sidebar Navigation */}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-top">
           <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
@@ -533,11 +499,11 @@ export default function Home() {
                   setSidebarOpen(false);
                   void askQuestion(
                     [
-                      "Quels sont mes droits et recours selon les textes camerounais ?",
-                      "Que disent les textes camerounais sur les télécommunications ?",
-                      "Que disent les textes camerounais sur la cybersécurité ?",
-                      "Que disent les textes camerounais sur le commerce électronique ?",
-                      "Que disent les textes camerounais sur la concurrence ?",
+                      "Quels sont mes droits et recours contre les abus selon les textes camerounais ?",
+                      "Que prévoient les textes camerounais pour fournir Internet ou créer un opérateur télécom ?",
+                      "Que dit la loi camerounaise sur la cybercriminalité et la sécurité des données ?",
+                      "Quelles sont les obligations légales du commerce électronique au Cameroun ?",
+                      "Que dit la législation camerounaise sur la concurrence et les prix ?",
                     ][index],
                   );
                 }}
@@ -553,17 +519,16 @@ export default function Home() {
           <div className="sidebar-note">
             <span className="note-icon"><ShieldCheck size={17} /></span>
             <div>
-              <strong>Des réponses sourcées</strong>
-              <p>Chaque réponse s&apos;appuie sur les documents disponibles.</p>
+              <strong>43 textes officiels indexés</strong>
+              <p>Chaque réponse cite les lois, décrets et décisions de l&apos;ART.</p>
             </div>
           </div>
           <div className="profile-row">
             <span className="profile-avatar">CM</span>
             <span className="profile-copy">
               <strong>Le droit, simplement</strong>
-              <small>Assistant juridique · Cameroun</small>
+              <small>Assistant Juridique · Cameroun</small>
             </span>
-            <ChevronDown size={15} className="profile-chevron" />
           </div>
         </div>
       </aside>
@@ -577,6 +542,7 @@ export default function Home() {
         />
       )}
 
+      {/* Main Panel */}
       <section className="main-panel">
         <header className="topbar">
           <div className="topbar-left">
@@ -588,9 +554,12 @@ export default function Home() {
             >
               <Menu size={20} />
             </button>
-            <span className="topbar-context"><span className="status-dot" /> Assistant juridique</span>
+            <span className="topbar-context">
+              <span className="status-dot" /> Assistant juridique
+            </span>
           </div>
           <div className="topbar-actions">
+            <ThemeToggle />
             <span className="country-tag"><span>🇨🇲</span> Cameroun</span>
             <button
               className="help-button"
@@ -614,8 +583,8 @@ export default function Home() {
           {messages.length === 0 ? (
             <div className="welcome">
               <div className="welcome-badge">
-                <span className="welcome-badge-icon"><Scale size={13} /></span>
-                Comprendre ses droits devrait être simple
+                <Scale size={13} />
+                <span>Information juridique accessible à tous</span>
               </div>
               <h1>
                 Le droit camerounais,
@@ -623,26 +592,33 @@ export default function Home() {
                 <span>enfin plus clair.</span>
               </h1>
               <p className="welcome-description">
-                Posez votre question en mots simples et obtenez des réponses
-                sourcées depuis les textes officiels.
+                Posez vos questions par écrit ou au micro et recevez des explications
+                fondées sur 43 textes de lois officiels.
               </p>
 
+              {/* Central Floating Composer */}
               <form className="composer composer-welcome" onSubmit={handleSubmit}>
                 <textarea
                   ref={textareaRef}
                   value={question}
                   onChange={(event) => setQuestion(event.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Décrivez votre situation ou posez une question…"
+                  placeholder="Décrivez votre situation ou posez une question juridique…"
                   aria-label="Votre question juridique"
                   rows={1}
                   maxLength={2000}
                   disabled={loading}
                 />
                 <div className="composer-bottom">
-                  <span className="composer-hint">
-                    <Sparkles size={14} /> Réponses basées sur 43 textes officiels
-                  </span>
+                  <div className="composer-left-actions">
+                    <VoiceInputButton
+                      disabled={loading}
+                      onTranscript={(text) => setQuestion(text)}
+                    />
+                    <span className="composer-hint">
+                      <Sparkles size={14} /> Répond avec citations précises
+                    </span>
+                  </div>
                   <button
                     className={`send-button ${question.trim() ? "send-ready" : ""}`}
                     type="submit"
@@ -653,50 +629,44 @@ export default function Home() {
                   </button>
                 </div>
               </form>
+
+              {/* Quick Action Chips (One-Click) */}
+              <QuickActionChips
+                loading={loading}
+                onSelectPrompt={(p) => void askQuestion(p)}
+              />
+
               {error && <p className="error-banner" role="alert">{error}</p>}
 
-              <div className="suggestion-heading">
-                <span>Pour commencer</span>
-                <span className="suggestion-line" />
-              </div>
-              <div className="suggestion-grid">
-                {starterSuggestions.map(({ icon: Icon, title, prompt, tint }) => (
-                  <button
-                    className="suggestion-card"
-                    key={title}
-                    type="button"
-                    onClick={() => void askQuestion(prompt)}
-                  >
-                    <span className={`suggestion-icon ${tint}`}><Icon size={18} strokeWidth={1.8} /></span>
-                    <span className="suggestion-copy">
-                      <strong>{title}</strong>
-                      <small>{prompt}</small>
-                    </span>
-                    <ArrowLeft className="suggestion-arrow" size={15} />
-                  </button>
-                ))}
-              </div>
+              {/* Minimalist Card-Based Topic Grid */}
+              <TopicCardsGrid
+                loading={loading}
+                onSelectCard={(p) => void askQuestion(p)}
+              />
+
+              {/* 50 Questions Library Toggle */}
               <button
                 className="question-library-toggle"
                 type="button"
                 aria-expanded={showQuestionLibrary}
                 onClick={() => setShowQuestionLibrary((current) => !current)}
               >
-                {showQuestionLibrary ? "Masquer les questions" : "Parcourir les 50 questions"}
+                {showQuestionLibrary ? "Masquer la bibliothèque" : "Explorer les 50 questions fréquentes"}
                 <ChevronDown className={showQuestionLibrary ? "chevron-open" : ""} size={15} />
               </button>
+
               {showQuestionLibrary && (
                 <section className="question-library" aria-label="Bibliothèque des questions">
                   <div className="question-library-intro">
-                    <strong>Questions pratiques par activité</strong>
-                    <span>Choisissez une question pour obtenir une réponse fondée sur les documents.</span>
+                    <strong>Questions types par activité</strong>
+                    <span>Cliquez sur une question pour obtenir sa réponse fondée sur les lois en vigueur.</span>
                   </div>
                   <div className="question-library-filters">
                     <input
                       type="search"
                       value={questionSearch}
-                      aria-label="Rechercher parmi les 50 questions"
-                      placeholder="Rechercher une question…"
+                      aria-label="Rechercher une question"
+                      placeholder="Rechercher parmi les 50 questions…"
                       onChange={(event) => {
                         setQuestionSearch(event.target.value);
                         setQuestionPage(0);
@@ -716,6 +686,7 @@ export default function Home() {
                       )}
                     </select>
                   </div>
+
                   {visibleBusinessQuestions.length > 0 ? (
                     <div className="suggestion-grid question-library-grid">
                       {visibleBusinessQuestions.map(({ icon: Icon, category, prompt }) => (
@@ -725,7 +696,7 @@ export default function Home() {
                           type="button"
                           onClick={() => void askQuestion(prompt)}
                         >
-                          <span className="suggestion-icon blue"><Icon size={17} strokeWidth={1.8} /></span>
+                          <span className="suggestion-icon cyan"><Icon size={17} strokeWidth={1.8} /></span>
                           <span className="suggestion-copy">
                             <strong>{category}</strong>
                             <small>{prompt}</small>
@@ -737,6 +708,7 @@ export default function Home() {
                   ) : (
                     <p className="question-library-empty">Aucune question ne correspond à votre recherche.</p>
                   )}
+
                   <div className="question-library-pagination">
                     <span>
                       {filteredBusinessQuestions.length === 0
@@ -765,10 +737,6 @@ export default function Home() {
                   </div>
                 </section>
               )}
-              <div className="trust-note">
-                <ShieldCheck size={15} />
-                <span>Information générale — pas un avis juridique personnalisé.</span>
-              </div>
             </div>
           ) : (
             <div className="message-list">
@@ -778,6 +746,7 @@ export default function Home() {
                 </button>
                 <span className="conversation-label">VOTRE CONVERSATION</span>
               </div>
+
               {messages.map((message, index) => (
                 <article className={`message message-${message.role}`} key={`${message.role}-${index}`}>
                   {message.role === "assistant" && (
@@ -786,23 +755,38 @@ export default function Home() {
                   <div className="message-content">
                     <div className="message-author">
                       {message.role === "user" ? "Vous" : "Droit.cm"}
-                      {message.role === "assistant" && <span className="answer-source-label"><Sparkles size={12} /> Réponse documentée</span>}
+                      {message.role === "assistant" && (
+                        <span className="answer-source-label">
+                          <Sparkles size={12} /> Réponse documentée
+                        </span>
+                      )}
                     </div>
-                    <div className="message-text">{message.role === "assistant" ? formatAnswer(message.content) : message.content}</div>
+
+                    <div className="message-text">
+                      {message.role === "assistant"
+                        ? formatAnswer(message.content, message.citations, openArticleDrawer)
+                        : message.content}
+                    </div>
+
+                    {/* Citations Card Grid */}
                     {message.role === "assistant" && message.citations && message.citations.length > 0 && (
                       <div className="sources-block">
                         <div className="sources-title">
-                          <span><BookOpen size={15} /> Sources consultées</span>
+                          <span><BookOpen size={15} /> Sources officielles citées</span>
                           <span className="source-count">{message.citations.length} document{message.citations.length > 1 ? "s" : ""}</span>
                         </div>
                         <div className="source-cards">
                           {(showAllSources ? message.citations : message.citations.slice(0, 3)).map((citation) => (
-                            <a
+                            <div
                               className="source-card"
-                              href={`/api/document?file=${encodeURIComponent(citation.file)}#page=${citation.page}`}
                               key={citation.id}
-                              target="_blank"
-                              rel="noreferrer"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => openArticleDrawer(citation)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") openArticleDrawer(citation);
+                              }}
+                              title="Cliquer pour afficher la fiche officielle"
                             >
                               <span className="source-file-icon"><FileText size={16} /></span>
                               <span className="source-copy">
@@ -810,7 +794,7 @@ export default function Home() {
                                 <small>{citation.category} · page {citation.page}</small>
                               </span>
                               <ExternalLink size={14} className="source-external" />
-                            </a>
+                            </div>
                           ))}
                         </div>
                         {message.citations.length > 3 && (
@@ -825,23 +809,34 @@ export default function Home() {
                         )}
                       </div>
                     )}
-                    {message.role === "assistant" && (!message.citations || message.citations.length === 0) && (
-                      <div className="no-sources-note">
-                        <ShieldCheck size={15} /> Cette réponse ne cite pas de document particulier.
-                      </div>
+
+                    {/* Action Toolbar under Assistant Message */}
+                    {message.role === "assistant" && (
+                      <MessageActions
+                        content={message.content}
+                        citations={message.citations}
+                        loading={loading}
+                        onCopy={() => handleCopyAnswer(message.content)}
+                        onOpenDrawer={(cit) => openArticleDrawer(cit)}
+                        onAskFollowUp={(fUp) => void askQuestion(fUp)}
+                      />
                     )}
                   </div>
                 </article>
               ))}
+
               {loading && (
                 <div className="message message-assistant loading-message">
                   <span className="message-avatar"><Scale size={16} /></span>
                   <div className="message-content">
-                    <div className="message-author">Droit.cm <span className="answer-source-label"><Sparkles size={12} /> Recherche dans les textes</span></div>
+                    <div className="message-author">
+                      Droit.cm <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
+                    </div>
                     <div className="typing-indicator"><span /><span /><span /></div>
                   </div>
                 </div>
               )}
+
               {error && (
                 <div className="error-banner conversation-error" role="alert">
                   <span>{error}</span>
@@ -853,6 +848,7 @@ export default function Home() {
           )}
         </div>
 
+        {/* Bottom Composer when conversation is active */}
         {messages.length > 0 && (
           <div className="bottom-composer-wrap">
             <form className="composer conversation-composer" onSubmit={handleSubmit}>
@@ -868,7 +864,15 @@ export default function Home() {
                 disabled={loading}
               />
               <div className="composer-bottom">
-                <span className="composer-hint"><span className="keyboard-hint">↵</span> Entrée pour envoyer · Maj + Entrée pour une ligne</span>
+                <div className="composer-left-actions">
+                  <VoiceInputButton
+                    disabled={loading}
+                    onTranscript={(text) => setQuestion(text)}
+                  />
+                  <span className="composer-hint">
+                    <span className="keyboard-hint">↵</span> Entrée pour envoyer
+                  </span>
+                </div>
                 <button
                   className={`send-button ${question.trim() ? "send-ready" : ""}`}
                   type="submit"
@@ -879,7 +883,9 @@ export default function Home() {
                 </button>
               </div>
             </form>
-            <p className="legal-footnote"><ShieldCheck size={13} /> Vérifiez toujours une information importante auprès d&apos;un professionnel ou d&apos;un organisme compétent.</p>
+            <p className="legal-footnote">
+              <ShieldCheck size={13} /> Information générale fondée sur les textes officiels du Cameroun. Ne remplace pas le conseil d&apos;un avocat.
+            </p>
           </div>
         )}
       </section>

@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUp,
   BookOpen,
   ChevronDown,
@@ -9,16 +10,20 @@ import {
   FileText,
   Gavel,
   Globe2,
+  HelpCircle,
   Menu,
   MessageCircle,
   Plus,
   Scale,
+  Search,
   ShieldCheck,
   Sparkles,
   X,
+  Zap,
 } from "lucide-react";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState, type ReactNode } from "react";
 
+/* ===== MARKDOWN RENDERING ===== */
 function renderInline(text: string): ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -78,6 +83,7 @@ function formatAnswer(text: string): ReactNode[] {
   return blocks;
 }
 
+/* ===== TYPES ===== */
 type Citation = {
   id: string;
   title: string;
@@ -93,33 +99,72 @@ type Message = {
   citations?: Citation[];
 };
 
-const starterSuggestions = [
+/* ===== ONBOARDING STEPS ===== */
+const onboardingSteps = [
   {
-    icon: ShieldCheck,
-    title: "Mes droits de consommateur",
-    prompt: "Quels sont mes droits si un opérateur me facture un service non demandé ?",
-    tint: "mint",
+    icon: Scale,
+    title: "Bienvenue sur Droit.cm",
+    description:
+      "Votre assistant juridique intelligent pour le Cameroun. Posez vos questions en langage simple et obtenez des réponses sourcées, directement tirées des textes officiels.",
   },
   {
-    icon: Globe2,
-    title: "Sécurité sur internet",
-    prompt: "Que dit la loi camerounaise sur la cybercriminalité et mes données ?",
-    tint: "lavender",
+    icon: Search,
+    title: "Comment ça marche ?",
+    features: [
+      {
+        icon: MessageCircle,
+        tint: "green" as const,
+        text: "Posez votre question en mots simples, comme à un ami juriste",
+      },
+      {
+        icon: BookOpen,
+        tint: "amber" as const,
+        text: "L'IA recherche dans 43 actes officiels et vous cite les sources",
+      },
+      {
+        icon: ShieldCheck,
+        tint: "violet" as const,
+        text: "Chaque réponse mentionne les articles de loi consultés",
+      },
+    ],
   },
   {
-    icon: MessageCircle,
-    title: "Téléphonie et internet",
-    prompt: "Quels recours ai-je si mon réseau téléphonique ne fonctionne pas ?",
-    tint: "peach",
-  },
-  {
-    icon: BookOpen,
-    title: "Comprendre un texte",
-    prompt: "Explique-moi simplement les règles du commerce électronique au Cameroun.",
-    tint: "blue",
+    icon: Zap,
+    title: "Prêt à commencer !",
+    description:
+      "Utilisez les suggestions rapides ou tapez directement votre question. Explorez les thèmes dans le menu latéral pour naviguer par domaine juridique.",
   },
 ];
 
+/* ===== STARTER SUGGESTIONS ===== */
+const starterSuggestions = [
+  {
+    icon: ShieldCheck,
+    title: "Droits du consommateur",
+    prompt: "Quels sont mes droits si un opérateur me facture un service non demandé ?",
+    tint: "mint" as const,
+  },
+  {
+    icon: Globe2,
+    title: "Cybersécurité",
+    prompt: "Que dit la loi camerounaise sur la cybercriminalité et mes données ?",
+    tint: "lavender" as const,
+  },
+  {
+    icon: MessageCircle,
+    title: "Téléphonie & internet",
+    prompt: "Quels recours ai-je si mon réseau téléphonique ne fonctionne pas ?",
+    tint: "peach" as const,
+  },
+  {
+    icon: BookOpen,
+    title: "Commerce électronique",
+    prompt: "Explique-moi simplement les règles du commerce électronique au Cameroun.",
+    tint: "blue" as const,
+  },
+];
+
+/* ===== BUSINESS QUESTIONS ===== */
 const businessQuestionCategories = [
   {
     title: "Télécommunications et Internet",
@@ -128,9 +173,9 @@ const businessQuestionCategories = [
       "Je veux créer une entreprise qui fournit Internet au public au Cameroun. Quelles démarches dois-je suivre ?",
       "Je veux lancer un opérateur de téléphonie mobile. Quelles autorisations et quelles étapes dois-je prévoir ?",
       "Je veux créer un opérateur mobile virtuel sans construire mon propre réseau. Comment puis-je procéder ?",
-      "Je veux déployer un réseau Internet dans une zone rurale. Quel régime d’autorisation pourrait s’appliquer ?",
-      "Je veux construire un réseau de fibre optique pour fournir Internet. Quels titres d’exploitation dois-je vérifier ?",
-      "Je veux fournir des services de télécommunications en utilisant le réseau d’un autre opérateur. Quel régime pourrait s’appliquer ?",
+      "Je veux déployer un réseau Internet dans une zone rurale. Quel régime d'autorisation pourrait s'appliquer ?",
+      "Je veux construire un réseau de fibre optique pour fournir Internet. Quels titres d'exploitation dois-je vérifier ?",
+      "Je veux fournir des services de télécommunications en utilisant le réseau d'un autre opérateur. Quel régime pourrait s'appliquer ?",
       "Je veux obtenir une concession pour exploiter un réseau télécom national. Quelles conditions et étapes les textes prévoient-ils ?",
       "Je veux exploiter un réseau de communications électroniques ouvert au public. Comment savoir si une concession ou une licence est nécessaire ?",
     ],
@@ -144,7 +189,7 @@ const businessQuestionCategories = [
       "Je veux créer un laboratoire qui teste des équipements télécom. Quel agrément faut-il demander ?",
       "Je veux vendre des équipements de communications électroniques. Quel agrément ou quelle homologation faut-il prévoir ?",
       "Je veux importer des appareils radioélectriques. Quelles vérifications réglementaires dois-je faire avant de les vendre ?",
-      "Je veux faire homologuer un nouveau modèle de téléphone avant sa commercialisation. Quelles règles s’appliquent ?",
+      "Je veux faire homologuer un nouveau modèle de téléphone avant sa commercialisation. Quelles règles s'appliquent ?",
       "Je veux installer et maintenir des infrastructures de communications électroniques pour des clients. Quels agréments dois-je vérifier ?",
     ],
   },
@@ -156,7 +201,7 @@ const businessQuestionCategories = [
       "Je veux utiliser temporairement des fréquences pour couvrir un festival. Comment puis-je en faire la demande ?",
       "Je veux lancer un service qui utilise des fréquences disponibles au Cameroun. Dans quels cas un appel à concurrence peut-il être nécessaire ?",
       "Je veux exploiter une station radioélectrique pour mon entreprise. Quel accord préalable dois-je obtenir ?",
-      "Je veux utiliser une fréquence radio pour un événement ponctuel. Quels éléments faut-il vérifier dans les règles d’assignation ?",
+      "Je veux utiliser une fréquence radio pour un événement ponctuel. Quels éléments faut-il vérifier dans les règles d'assignation ?",
       "Je veux demander des fréquences pour un nouveau service télécom. Comment la disponibilité des fréquences peut-elle influencer la procédure ?",
       "Je veux exploiter plusieurs équipements radioélectriques sur différents sites. Quelles autorisations de fréquence dois-je vérifier ?",
     ],
@@ -179,7 +224,7 @@ const businessQuestionCategories = [
     icon: BookOpen,
     questions: [
       "Je veux créer une entreprise de livraison de colis au Cameroun. Quelles démarches du secteur postal dois-je suivre ?",
-      "Je veux lancer un service de courrier express entre plusieurs villes. Quel régime postal pourrait s’appliquer ?",
+      "Je veux lancer un service de courrier express entre plusieurs villes. Quel régime postal pourrait s'appliquer ?",
       "Je veux créer un réseau de points relais pour les colis. Quelles règles postales dois-je vérifier ?",
       "Je veux proposer la collecte, le tri et la distribution de colis. Une licence postale est-elle prévue par les textes ?",
       "Je veux lancer un service de courrier accéléré. Quelles obligations sectorielles dois-je vérifier ?",
@@ -191,13 +236,13 @@ const businessQuestionCategories = [
     title: "Télécoms et obligations envers les clients",
     icon: ShieldCheck,
     questions: [
-      "Je veux créer un opérateur Internet et utiliser les infrastructures d’un opérateur déjà établi. Comment demander l’accès ou l’interconnexion ?",
-      "Je veux lancer une entreprise de télécommunications avec des forfaits prépayés. Quelles obligations d’identification des abonnés dois-je prévoir, selon les règles compilées en 2023 ?",
-      "Je veux lancer un service mobile qui fonctionne aussi sur le réseau d’autres opérateurs. Quelles règles d’itinérance nationale dois-je vérifier, notamment dans la décision de l’ART du 11 mars 2024 ?",
-      "Je veux vendre des cartes SIM dans des points de vente partenaires. Quelles obligations d’identification des abonnés dois-je respecter ?",
-      "Je veux proposer des forfaits téléphoniques au public. Quelles règles encadrent l’information des abonnés et les tarifs ?",
-      "Je veux créer un service de télécommunications et traiter les réclamations de mes abonnés. Quels textes du corpus peuvent s’appliquer ?",
-      "Je veux partager des infrastructures avec un opérateur télécom existant. Quelles règles d’accès et de partage dois-je vérifier ?",
+      "Je veux créer un opérateur Internet et utiliser les infrastructures d'un opérateur déjà établi. Comment demander l'accès ou l'interconnexion ?",
+      "Je veux lancer une entreprise de télécommunications avec des forfaits prépayés. Quelles obligations d'identification des abonnés dois-je prévoir, selon les règles compilées en 2023 ?",
+      "Je veux lancer un service mobile qui fonctionne aussi sur le réseau d'autres opérateurs. Quelles règles d'itinérance nationale dois-je vérifier, notamment dans la décision de l'ART du 11 mars 2024 ?",
+      "Je veux vendre des cartes SIM dans des points de vente partenaires. Quelles obligations d'identification des abonnés dois-je respecter ?",
+      "Je veux proposer des forfaits téléphoniques au public. Quelles règles encadrent l'information des abonnés et les tarifs ?",
+      "Je veux créer un service de télécommunications et traiter les réclamations de mes abonnés. Quels textes du corpus peuvent s'appliquer ?",
+      "Je veux partager des infrastructures avec un opérateur télécom existant. Quelles règles d'accès et de partage dois-je vérifier ?",
     ],
   },
   {
@@ -205,12 +250,12 @@ const businessQuestionCategories = [
     icon: Gavel,
     questions: [
       "Je veux créer une entreprise de services numériques sans exercer une activité réservée à un opérateur autorisé. Comment vérifier le régime applicable ?",
-      "Je veux lancer un nouveau service qui combine Internet, téléphonie et vente d’équipements. Quelles autorisations pourraient concerner chaque activité ?",
+      "Je veux lancer un nouveau service qui combine Internet, téléphonie et vente d'équipements. Quelles autorisations pourraient concerner chaque activité ?",
       "Je veux développer une jeune entreprise dans le secteur des postes ou des télécommunications. Quels textes du corpus dois-je consulter en priorité selon mon activité ?",
       "Je veux lancer une activité télécom sans construire mon propre réseau. Comment déterminer si une licence, une concession ou une déclaration est nécessaire ?",
-      "Je veux créer une entreprise qui fournit un service au public sur un réseau de communications électroniques. Quel régime d’exploitation dois-je vérifier ?",
-      "Je veux créer une entreprise dans le secteur postal. Comment savoir si mon activité relève d’une licence, d’une concession ou d’un autre régime ?",
-      "Je veux développer une activité réglementée dans les TIC. Comment distinguer les autorisations sectorielles des formalités générales de création d’entreprise ?",
+      "Je veux créer une entreprise qui fournit un service au public sur un réseau de communications électroniques. Quel régime d'exploitation dois-je vérifier ?",
+      "Je veux créer une entreprise dans le secteur postal. Comment savoir si mon activité relève d'une licence, d'une concession ou d'un autre régime ?",
+      "Je veux développer une activité réglementée dans les TIC. Comment distinguer les autorisations sectorielles des formalités générales de création d'entreprise ?",
     ],
   },
 ].flatMap((category) =>
@@ -221,6 +266,7 @@ const businessQuestionCategories = [
   })),
 );
 
+/* ===== SIDEBAR TOPICS ===== */
 const topics = [
   { label: "Droits du consommateur", icon: ShieldCheck },
   { label: "Télécommunications", icon: Globe2 },
@@ -229,6 +275,72 @@ const topics = [
   { label: "Concurrence", icon: Gavel },
 ];
 
+/* ===== ONBOARDING COMPONENT ===== */
+function Onboarding({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(0);
+  const current = onboardingSteps[step];
+  const Icon = current.icon;
+
+  return (
+    <div className="onboarding-overlay">
+      <div className="onboarding-modal">
+        <div className="onboarding-step-indicator">
+          {onboardingSteps.map((_, i) => (
+            <span
+              key={i}
+              className={`step-dot ${i === step ? "active" : i < step ? "done" : ""}`}
+            />
+          ))}
+        </div>
+
+        <span className="onboarding-icon">
+          <Icon size={26} strokeWidth={1.8} />
+        </span>
+
+        <h2>{current.title}</h2>
+
+        {"description" in current && <p>{current.description}</p>}
+
+        {"features" in current && current.features != null && (
+          <ul className="onboarding-feature-list">
+            {current.features.map((feature, i) => {
+              const FIcon = feature.icon;
+              return (
+                <li className="onboarding-feature" key={i}>
+                  <span className={`onboarding-feature-icon ${feature.tint}`}>
+                    <FIcon size={18} strokeWidth={1.8} />
+                  </span>
+                  <span>{feature.text}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="onboarding-actions">
+          <button className="onboarding-skip" type="button" onClick={onComplete}>
+            Passer
+          </button>
+          {step < onboardingSteps.length - 1 ? (
+            <button
+              className="onboarding-next"
+              type="button"
+              onClick={() => setStep(step + 1)}
+            >
+              Suivant <ArrowRight size={15} />
+            </button>
+          ) : (
+            <button className="onboarding-next" type="button" onClick={onComplete}>
+              C&apos;est parti ! <Sparkles size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== MAIN PAGE ===== */
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
@@ -240,17 +352,34 @@ export default function Home() {
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionCategory, setQuestionCategory] = useState("Toutes les catégories");
   const [questionPage, setQuestionPage] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const filteredBusinessQuestions = businessQuestionCategories.filter(({ prompt, category }) =>
-    (questionCategory === "Toutes les catégories" || category === questionCategory) &&
-    prompt.toLocaleLowerCase("fr").includes(questionSearch.trim().toLocaleLowerCase("fr")),
+
+  const filteredBusinessQuestions = businessQuestionCategories.filter(
+    ({ prompt, category }) =>
+      (questionCategory === "Toutes les catégories" || category === questionCategory) &&
+      prompt.toLocaleLowerCase("fr").includes(questionSearch.trim().toLocaleLowerCase("fr")),
   );
   const questionsPerPage = 8;
   const visibleBusinessQuestions = filteredBusinessQuestions.slice(
     questionPage * questionsPerPage,
     (questionPage + 1) * questionsPerPage,
   );
+
+  useEffect(() => {
+    const seen = localStorage.getItem("droit-cm-onboarded");
+    if (!seen) setShowOnboarding(true);
+  }, []);
+
+  function completeOnboarding() {
+    setShowOnboarding(false);
+    localStorage.setItem("droit-cm-onboarded", "1");
+  }
+
+  function reopenTutorial() {
+    setShowOnboarding(true);
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -288,7 +417,7 @@ export default function Home() {
           "error" in data &&
           typeof data.error === "string"
             ? data.error
-            : "La réponse n’a pas pu être générée.";
+            : "La réponse n'a pas pu être générée.";
         throw new Error(message);
       }
 
@@ -363,6 +492,8 @@ export default function Home() {
 
   return (
     <main className="app-shell">
+      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-top">
           <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
@@ -423,7 +554,7 @@ export default function Home() {
             <span className="note-icon"><ShieldCheck size={17} /></span>
             <div>
               <strong>Des réponses sourcées</strong>
-              <p>Chaque réponse s’appuie sur les documents disponibles.</p>
+              <p>Chaque réponse s&apos;appuie sur les documents disponibles.</p>
             </div>
           </div>
           <div className="profile-row">
@@ -462,6 +593,14 @@ export default function Home() {
           <div className="topbar-actions">
             <span className="country-tag"><span>🇨🇲</span> Cameroun</span>
             <button
+              className="help-button"
+              type="button"
+              onClick={reopenTutorial}
+              aria-label="Aide"
+            >
+              <HelpCircle size={16} /> Aide
+            </button>
+            <button
               className="header-new-button"
               type="button"
               onClick={startNewConversation}
@@ -475,7 +614,7 @@ export default function Home() {
           {messages.length === 0 ? (
             <div className="welcome">
               <div className="welcome-badge">
-                <span className="welcome-badge-icon"><Scale size={15} /></span>
+                <span className="welcome-badge-icon"><Scale size={13} /></span>
                 Comprendre ses droits devrait être simple
               </div>
               <h1>
@@ -484,8 +623,8 @@ export default function Home() {
                 <span>enfin plus clair.</span>
               </h1>
               <p className="welcome-description">
-                Posez votre question en mots simples. Explorez les textes de loi
-                camerounais et comprenez ce qu’ils signifient pour vous.
+                Posez votre question en mots simples et obtenez des réponses
+                sourcées depuis les textes officiels.
               </p>
 
               <form className="composer composer-welcome" onSubmit={handleSubmit}>
@@ -502,7 +641,7 @@ export default function Home() {
                 />
                 <div className="composer-bottom">
                   <span className="composer-hint">
-                    <Sparkles size={14} /> Réponses basées sur les textes disponibles
+                    <Sparkles size={14} /> Réponses basées sur 43 textes officiels
                   </span>
                   <button
                     className={`send-button ${question.trim() ? "send-ready" : ""}`}
@@ -740,7 +879,7 @@ export default function Home() {
                 </button>
               </div>
             </form>
-            <p className="legal-footnote"><ShieldCheck size={13} /> Vérifiez toujours une information importante auprès d’un professionnel ou d’un organisme compétent.</p>
+            <p className="legal-footnote"><ShieldCheck size={13} /> Vérifiez toujours une information importante auprès d&apos;un professionnel ou d&apos;un organisme compétent.</p>
           </div>
         )}
       </section>

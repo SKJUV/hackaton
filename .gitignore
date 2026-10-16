@@ -7,4 +7,8 @@ dist/
 .env.*
 !.env.example
 data/documents.json
+data/base_de_donnees_reglementation.json
+data/reglementation_articles_index.json
+data/reglementation_documents.json
+data/reglementation_thesaurus.json
 *.tsbuildinfo

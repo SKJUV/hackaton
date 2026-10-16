@@ -65,11 +65,13 @@ export async function searchLegalCorpus(question: string, limit = 5): Promise<Le
   ]);
   const official = [...pdfChunks, ...ingested];
   const officialResults: SearchResult[] = official.length ? searchDocuments(question, official, limit) : [];
-  const exampleResults = searchDocuments(question, examples, 2).map((r) => ({ ...r, isExample: true }));
-  const best = officialResults[0]?.score ?? 0;
-  const keptExamples = exampleResults.filter(
-    (r) => officialResults.length < 2 || r.score >= best * 0.6,
-  );
+  // Score comparable : on classe les exemples dans le même espace de recherche que le corpus officiel.
+  const combined = official.length ? searchDocuments(question, [...official, ...examples], limit + 3) : searchDocuments(question, examples, 2);
+  const exampleIds = new Set(examples.map((e) => e.id));
+  const keptExamples = combined
+    .filter((r) => exampleIds.has(r.id))
+    .slice(0, 2)
+    .map((r) => ({ ...r, isExample: true }));
   const merged = [...officialResults.slice(0, limit - Math.min(keptExamples.length, 2)), ...keptExamples].slice(0, limit);
   const citations = getCitations(merged, official);
   return {
@@ -80,14 +82,14 @@ export async function searchLegalCorpus(question: string, limit = 5): Promise<Le
   };
 }
 
-/** Liste des documents officiels distincts (pour la veille réglementaire). */
+/** Documents officiels distincts avec leur texte intégral (pour la veille réglementaire). */
 export async function listOfficialDocuments(): Promise<{ source: string; title: string; category: string; sample: string }[]> {
   const [pdfChunks, ingested] = await Promise.all([loadDocumentChunks(), loadIngestedOfficial()]);
-  const bySource = new Map<string, { source: string; title: string; category: string; sample: string }>();
+  const bySource = new Map<string, { source: string; title: string; category: string; parts: string[] }>();
   for (const chunk of [...pdfChunks, ...ingested]) {
     const existing = bySource.get(chunk.source);
-    if (!existing) bySource.set(chunk.source, { source: chunk.source, title: chunk.title, category: chunk.category, sample: chunk.text.slice(0, 4000) });
-    else if (existing.sample.length < 4000) existing.sample += ` ${chunk.text.slice(0, 4000 - existing.sample.length)}`;
+    if (existing) existing.parts.push(chunk.text);
+    else bySource.set(chunk.source, { source: chunk.source, title: chunk.title, category: chunk.category, parts: [chunk.text] });
   }
-  return [...bySource.values()];
+  return [...bySource.values()].map(({ parts, ...doc }) => ({ ...doc, sample: parts.join(" ") }));
 }

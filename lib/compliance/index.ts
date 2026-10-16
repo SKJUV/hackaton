@@ -80,11 +80,12 @@ export function regulatoryWatch(
         title: doc.title,
         category: doc.category,
         matched,
-        relevance: matched.length * 10 + Math.min(hits, 30) + (primary ? 15 : 0),
+        relevance: matched.length * 10 + Math.min(Math.round(Math.sqrt(hits) * 4), 40) + (primary ? 25 : 0) - (doc.source.startsWith("publications/") ? 15 : 0),
         isNewOfficial: doc.source.startsWith("corpus/officiel"),
       };
     })
-    .filter((a) => a.matched.length > 0)
+    .filter((a) => a.matched.length > 0 && a.relevance > 0)
+    .filter((a, i, all) => all.findIndex((b) => b.title.replace(/\s*copie\s*/gi, "").trim() === a.title.replace(/\s*copie\s*/gi, "").trim()) === i)
     .sort((a, b) => Number(b.isNewOfficial) - Number(a.isNewOfficial) || b.relevance - a.relevance)
     .slice(0, limit);
 }

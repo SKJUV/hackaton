@@ -215,7 +215,7 @@ export const TOOLS: AgentTool[] = [
       const details = Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "string")) as Record<string, string>;
       const content = generateLegalDocument(kind, snap.company, snap.members, details);
       const doc = await saveDocument(ctx.companyId, { title: `${LEGAL_TEMPLATE_LABELS[kind]}${details.partie ? ` — ${details.partie}` : ""}`, kind: kind === "statuts" ? "statuts" : kind === "pv_ag" ? "pv" : "contrat", content, needsReview: true }, "agent");
-      return { summary: `${LEGAL_TEMPLATE_LABELS[kind]} générée (à valider)`, data: { documentId: doc.id } };
+      return { summary: `Document généré : ${LEGAL_TEMPLATE_LABELS[kind]} (à valider)`, data: { documentId: doc.id } };
     },
   },
   {

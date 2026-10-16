@@ -266,18 +266,35 @@ export async function decideApproval(approvalId: string, decision: "approuver" |
 export async function searchSuppliers(query: { category?: string; city?: string; need?: string }) {
   const data = await readData();
   const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const need = query.need ? norm(query.need).split(/\s+/).filter((w) => w.length > 2) : [];
+  const generic = new Set(["devis", "fournisseur", "fournisseurs", "demande", "demander", "trouve", "trouver", "pour", "avec", "dans", "contacte", "contacter", "prestataire", "prestataires", "besoin", "acheter", "commander", "veux", "voudrais", "merci", "peux", "cherche"]);
+  const need = query.need
+    ? norm(query.need)
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length > 3 && !generic.has(w))
+        .map((w) => (w.length > 4 ? w.replace(/s$/, "") : w))
+    : [];
   return data.suppliers
     .map((s) => {
-      const hay = norm(`${s.name} ${s.category} ${s.services.join(" ")} ${s.description}`);
+      const words = new Set(
+        norm(`${s.name} ${s.category} ${s.services.join(" ")} ${s.description}`)
+          .split(/[^a-z0-9]+/)
+          .map((w) => (w.length > 4 ? w.replace(/s$/, "") : w)),
+      );
       let score = s.rating;
       if (query.category && norm(s.category).includes(norm(query.category))) score += 10;
       if (query.city && norm(s.city) === norm(query.city)) score += 3;
-      score += need.filter((w) => hay.includes(w)).length * 4;
+      score += need.filter((w) => words.has(w)).length * 4;
       return { supplier: s, score };
     })
-    .filter(({ score, supplier }) => (query.category ? norm(supplier.category).includes(norm(query.category)) || score > supplier.rating + 3 : need.length ? score > supplier.rating : true))
+    .filter(({ score, supplier }) =>
+      query.category
+        ? norm(supplier.category).includes(norm(query.category)) || score >= supplier.rating + 4
+        : need.length
+          ? score >= supplier.rating + 4
+          : true,
+    )
     .sort((a, b) => b.score - a.score)
+    .filter((entry, _i, all) => !need.length || entry.score >= all[0].score * 0.7)
     .map(({ supplier }) => supplier);
 }
 

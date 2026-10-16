@@ -56,6 +56,16 @@ function extractDate(message: string): string | undefined {
   return undefined;
 }
 
+/** « Envoie un mail à x@y.com pour demander un RDV » → « demander un RDV ». */
+export function extractPurpose(message: string): string {
+  const cleaned = message.replace(/[^\s@<>,;()]+@[^\s@<>,;()]+\.[a-z]{2,}/gi, "").replace(/\s+/g, " ").trim();
+  const after = cleaned.match(/\b(?:pour|afin de|concernant|au sujet de)\s+(.+)$/i);
+  const purpose = (after ? after[1] : cleaned.replace(/^(peux-tu |merci d['’]|stp )?(envoie|envoyer|écris|ecris|rédige|redige)( un)?( e-?mail| mail| courriel)?( à| a)?\s*/i, ""))
+    .replace(/[.!?\s]+$/, "")
+    .trim();
+  return purpose || "prendre contact";
+}
+
 export async function runDemoPlanner(company: Company, message: string) {
   const ctx: ToolContext = { companyId: company.id, citations: [] };
   const trace: ToolTrace[] = [];
@@ -105,8 +115,9 @@ export async function runDemoPlanner(company: Company, message: string) {
           lines.push("Pour rédiger l'email, indiquez l'adresse du destinataire (ex. contact@exemple.com).");
           break;
         }
-        const subject = `${company.name.replace(" (démo)", "")} — ${message.replace(/[^\p{L}\p{N}\s'’-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60)}`;
-        const body = `Bonjour,\n\n${message.trim()}\n\nJe reste disponible pour échanger à votre convenance.\n\nCordialement,\nL'équipe ${company.name.replace(" (démo)", "")}`;
+        const purpose = extractPurpose(message);
+        const subject = `${company.name.replace(" (démo)", "")} — ${purpose.charAt(0).toUpperCase()}${purpose.slice(1, 70)}`;
+        const body = `Bonjour,\n\nJe vous contacte au nom de ${company.name.replace(" (démo)", "")} (${company.sector}, ${company.city}) afin de ${purpose}.\n\nPourriez-vous nous indiquer vos disponibilités et les éléments éventuellement nécessaires ?\n\nJe reste disponible pour échanger à votre convenance.\n\nCordialement,\nL'équipe ${company.name.replace(" (démo)", "")}`;
         const r = await call("rediger_email", { destinataires: to, objet: subject, corps: body });
         if (r) lines.push(`✉️ Email à ${to.join(", ")} rédigé et placé dans la **file d'approbation**. Il partira uniquement après votre validation.`);
         break;
@@ -154,7 +165,11 @@ export async function runDemoPlanner(company: Company, message: string) {
         break;
       }
       case "tache": {
-        const r = await call("creer_tache", { titre: message.replace(/^(rappelle-moi de|rappelle moi de|n'oublie pas de|crée une tâche pour)\s*/i, "").slice(0, 120), echeance: extractDate(message) });
+        const titre = message
+          .replace(/^(rappelle[- ]moi de|n['’]oublie pas de|crée une tâche pour|cree une tache pour|ajoute une tâche\s*:?)\s*/i, "")
+          .replace(/\s*(dans \d{1,3} jours?|demain|le \d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\s*/gi, " ")
+          .trim();
+        const r = await call("creer_tache", { titre: (titre.charAt(0).toUpperCase() + titre.slice(1)).slice(0, 120), echeance: extractDate(message) });
         if (r) lines.push(`📝 ${r.summary}.`);
         break;
       }

@@ -563,6 +563,9 @@ export default function Home() {
             </span>
           </div>
           <div className="topbar-actions">
+            <a className="workspace-link" href="/workspace" title="Agent co-fondateur, emails, fournisseurs, démarches">
+              <Sparkles size={15} /> <span>Workspace entreprise</span>
+            </a>
             <PwaInstallPrompt />
             <ThemeToggle />
             <span className="country-tag"><span>🇨🇲</span> Cameroun</span>

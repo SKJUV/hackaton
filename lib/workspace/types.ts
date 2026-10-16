@@ -194,6 +194,59 @@ export type ToolTrace = {
   ok: boolean;
 };
 
+/* ----------------------------------------------------------- Comptes & abonnements */
+
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  /** Optionnel : la connexion par code/lien magique ne requiert jamais de mot de passe. */
+  passwordHash?: string;
+  kind: "standard" | "invite" | "demo";
+  createdAt: string;
+  lastLoginAt?: string;
+};
+
+export type LoginCode = {
+  id: string;
+  email: string;
+  codeHash: string;
+  tokenHash: string;
+  purpose: "connexion" | "inscription" | "reinitialisation";
+  name?: string;
+  expiresAt: string;
+  usedAt?: string;
+  createdAt: string;
+};
+
+/** Emails système (connexion, paiement) : visibles dans la boîte de démo en mode simulation. */
+export type SystemEmail = {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  status: "simule" | "envoye" | "echec";
+  provider: string;
+  createdAt: string;
+};
+
+export type SubscriptionStatus = "active" | "en_attente" | "annulee" | "expiree";
+export type Subscription = {
+  id: string;
+  userId: string;
+  planId: string;
+  status: SubscriptionStatus;
+  provider: string;
+  simulated: boolean;
+  reference: string;
+  amount: number;
+  currency: string;
+  startedAt?: string;
+  currentPeriodEnd?: string;
+  canceledAt?: string;
+  createdAt: string;
+};
+
 export type WorkspaceData = {
   version: number;
   companies: Company[];
@@ -208,4 +261,8 @@ export type WorkspaceData = {
   checklist: ChecklistStep[];
   obligations: Obligation[];
   messages: AgentMessage[];
+  users: User[];
+  loginCodes: LoginCode[];
+  systemEmails: SystemEmail[];
+  subscriptions: Subscription[];
 };

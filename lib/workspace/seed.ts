@@ -81,6 +81,12 @@ export function buildObligations(companyId: string, regulated: boolean): Obligat
   return list;
 }
 
+/** Comptes de démonstration accessibles en un clic (aucun mot de passe). */
+export const SEED_USERS = [
+  { id: "usr_demo_freddy", email: "freddy@demo.example.com", name: "Freddy Choudja (démo · abonné)", kind: "demo" as const },
+  { id: "usr_demo_awa", email: "awa@demo.example.com", name: "Awa Mbarga (démo · gratuit)", kind: "demo" as const },
+];
+
 export function buildSeed(): WorkspaceData {
   const now = new Date();
   const companies: Company[] = [
@@ -89,7 +95,7 @@ export function buildSeed(): WorkspaceData {
   ];
   const t = iso(now);
   return {
-    version: 1,
+    version: 2,
     companies,
     members: [
       { id: "mem_freddy", companyId: "co_kmerlog", name: "Freddy Choudja", email: "freddy@demo.example.com", role: "proprietaire", createdAt: t },
@@ -114,5 +120,11 @@ export function buildSeed(): WorkspaceData {
     checklist: [...buildChecklist("co_kmerlog", 2), ...buildChecklist("co_afritel", 0)],
     obligations: [...buildObligations("co_kmerlog", true), ...buildObligations("co_afritel", true)],
     messages: [],
+    users: SEED_USERS.map((u) => ({ ...u, createdAt: t })),
+    loginCodes: [],
+    systemEmails: [],
+    subscriptions: [
+      { id: "sub_demo_freddy", userId: "usr_demo_freddy", planId: "cofondateur", status: "active", provider: "simulation", simulated: true, reference: "SIM-SEED-001", amount: 0, currency: "XAF", startedAt: t, currentPeriodEnd: iso(inDays(30, now)), createdAt: t },
+    ],
   };
 }

@@ -7,7 +7,7 @@ import type { WorkspaceData } from "./types";
  * Persistance fichier JSON (zéro dépendance) derrière une API transactionnelle.
  * Remplaçable par Postgres/SQLite : seules `readData`/`withData` sont utilisées par les services.
  */
-export const DATA_VERSION = 1;
+export const DATA_VERSION = 2;
 
 function dbPath(): string {
   return process.env.WORKSPACE_DB_PATH || path.join(process.cwd(), "data", "workspace.db.json");
@@ -21,13 +21,27 @@ async function load(): Promise<WorkspaceData> {
   if (cache && cache.path === file) return cache.data;
   let data: WorkspaceData;
   try {
-    data = JSON.parse(await readFile(file, "utf8")) as WorkspaceData;
-    if (data.version !== DATA_VERSION) throw new Error("version");
+    data = migrate(JSON.parse(await readFile(file, "utf8")) as WorkspaceData);
   } catch {
     data = buildSeed();
     await persist(file, data);
   }
   cache = { path: file, data };
+  return data;
+}
+
+/** Migrations non destructives : on conserve les données existantes. */
+function migrate(data: WorkspaceData): WorkspaceData {
+  if (!data || typeof data !== "object" || !Array.isArray(data.companies)) throw new Error("format");
+  if (data.version < 2) {
+    const seed = buildSeed();
+    data.users = seed.users;
+    data.loginCodes = [];
+    data.systemEmails = [];
+    data.subscriptions = seed.subscriptions;
+    data.version = 2;
+  }
+  if (data.version !== DATA_VERSION) throw new Error("version");
   return data;
 }
 

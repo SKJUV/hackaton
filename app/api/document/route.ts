@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const allowedRoots = ["reglementation", "publications"].map((folder) =>
+const allowedRoots = ["reglementation", "publications", "corpus/officiel"].map((folder) =>
   path.resolve(process.cwd(), folder),
 );
 

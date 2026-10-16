@@ -1,0 +1,32 @@
+{
+  "avertissement": "TEXTES D'EXEMPLE NON OFFICIELS — rédigés pour la démonstration du produit. Ils ne reproduisent aucun texte de loi réel et ne doivent jamais être présentés comme du droit positif. À remplacer par le corpus officiel fourni par l'État (dossier corpus/officiel).",
+  "documents": [
+    {
+      "titre": "EXEMPLE — Texte type EX-SOC-01 sur les formalités de création d'entreprise (non officiel)",
+      "categorie": "Exemple · Création d'entreprise",
+      "articles": [
+        { "numero": "1", "texte": "Article 1 (exemple) — Toute personne qui souhaite créer une société commerciale choisit une forme sociale, rédige des statuts et accomplit les formalités d'immatriculation auprès du guichet unique compétent." },
+        { "numero": "2", "texte": "Article 2 (exemple) — Le dossier de création comprend notamment les statuts signés, la liste des dirigeants, un justificatif du siège social et, le cas échéant, l'attestation de dépôt du capital." },
+        { "numero": "3", "texte": "Article 3 (exemple) — Après immatriculation, l'entreprise obtient un identifiant fiscal et, si elle emploie du personnel, s'affilie à l'organisme de sécurité sociale avant la première embauche." },
+        { "numero": "4", "texte": "Article 4 (exemple) — Les activités soumises à un régime sectoriel (licence, concession, déclaration, agrément) ne peuvent démarrer qu'après obtention du titre requis par les textes sectoriels." }
+      ]
+    },
+    {
+      "titre": "EXEMPLE — Texte type EX-FIS-01 sur les obligations déclaratives des jeunes entreprises (non officiel)",
+      "categorie": "Exemple · Fiscalité",
+      "articles": [
+        { "numero": "1", "texte": "Article 1 (exemple) — Les entreprises déposent chaque mois une déclaration des impôts et taxes dus au titre du mois précédent, au plus tard à la date fixée par l'administration fiscale." },
+        { "numero": "2", "texte": "Article 2 (exemple) — Les états financiers annuels sont déposés dans le délai fixé après la clôture de l'exercice, accompagnés de la déclaration statistique et fiscale." },
+        { "numero": "3", "texte": "Article 3 (exemple) — Le retard de déclaration peut donner lieu à des pénalités dont le barème est fixé par les textes fiscaux officiels." }
+      ]
+    },
+    {
+      "titre": "EXEMPLE — Texte type EX-CTR-01 sur les contrats de prestation et devis (non officiel)",
+      "categorie": "Exemple · Contrats",
+      "articles": [
+        { "numero": "1", "texte": "Article 1 (exemple) — Le devis précise la nature de la prestation, le prix, le délai d'exécution et la durée de validité de l'offre." },
+        { "numero": "2", "texte": "Article 2 (exemple) — L'acceptation écrite du devis par le client vaut accord sur les conditions qui y figurent." }
+      ]
+    }
+  ]
+}

@@ -633,6 +633,133 @@ textarea:focus-visible {
   transform: rotate(135deg) translateX(2px);
 }
 
+.question-library-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 13px auto 0;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: #55745b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.question-library-toggle:hover {
+  color: #294d34;
+}
+
+.question-library-toggle svg {
+  transition: transform 160ms ease;
+}
+
+.question-library-toggle .chevron-open {
+  transform: rotate(180deg);
+}
+
+.question-library {
+  margin-top: 11px;
+  padding: 14px;
+  border: 1px solid #e8eee7;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.question-library-intro {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 11px;
+}
+
+.question-library-intro strong {
+  color: #47534b;
+  font-size: 11px;
+}
+
+.question-library-intro span {
+  color: #929b94;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.question-library-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.question-library-filters input,
+.question-library-filters select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid #e6ebe5;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  color: #47534b;
+  font: inherit;
+  font-size: 9px;
+}
+
+.question-library-filters input:focus,
+.question-library-filters select:focus {
+  border-color: #b7cbb9;
+  box-shadow: 0 0 0 2px rgba(133, 170, 140, 0.1);
+}
+
+.question-library-grid {
+  gap: 7px;
+}
+
+.question-library-grid .suggestion-card {
+  min-height: 62px;
+}
+
+.question-library-empty {
+  margin: 18px 0;
+  color: #929b94;
+  font-size: 10px;
+  text-align: center;
+}
+
+.question-library-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  color: #929b94;
+  font-size: 9px;
+}
+
+.question-library-pagination div {
+  display: flex;
+  gap: 6px;
+}
+
+.question-library-pagination button {
+  padding: 6px 9px;
+  border: 1px solid #e6ebe5;
+  border-radius: 7px;
+  background: #fff;
+  color: #55745b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.question-library-pagination button:disabled {
+  color: #b7bdb8;
+  cursor: default;
+}
+
 .trust-note {
   display: flex;
   align-items: center;

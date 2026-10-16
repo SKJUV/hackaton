@@ -93,7 +93,7 @@ type Message = {
   citations?: Citation[];
 };
 
-const suggestions = [
+const starterSuggestions = [
   {
     icon: ShieldCheck,
     title: "Mes droits de consommateur",
@@ -120,6 +120,107 @@ const suggestions = [
   },
 ];
 
+const businessQuestionCategories = [
+  {
+    title: "Télécommunications et Internet",
+    icon: Globe2,
+    questions: [
+      "Je veux créer une entreprise qui fournit Internet au public au Cameroun. Quelles démarches dois-je suivre ?",
+      "Je veux lancer un opérateur de téléphonie mobile. Quelles autorisations et quelles étapes dois-je prévoir ?",
+      "Je veux créer un opérateur mobile virtuel sans construire mon propre réseau. Comment puis-je procéder ?",
+      "Je veux déployer un réseau Internet dans une zone rurale. Quel régime d’autorisation pourrait s’appliquer ?",
+      "Je veux construire un réseau de fibre optique pour fournir Internet. Quels titres d’exploitation dois-je vérifier ?",
+      "Je veux fournir des services de télécommunications en utilisant le réseau d’un autre opérateur. Quel régime pourrait s’appliquer ?",
+      "Je veux obtenir une concession pour exploiter un réseau télécom national. Quelles conditions et étapes les textes prévoient-ils ?",
+      "Je veux exploiter un réseau de communications électroniques ouvert au public. Comment savoir si une concession ou une licence est nécessaire ?",
+    ],
+  },
+  {
+    title: "Installation et équipements",
+    icon: Globe2,
+    questions: [
+      "Je veux créer une entreprise qui installe des antennes et des équipements télécom. Quel agrément dois-je obtenir ?",
+      "Je veux importer des téléphones pour les vendre au Cameroun. Que dois-je vérifier avant leur commercialisation ?",
+      "Je veux créer un laboratoire qui teste des équipements télécom. Quel agrément faut-il demander ?",
+      "Je veux vendre des équipements de communications électroniques. Quel agrément ou quelle homologation faut-il prévoir ?",
+      "Je veux importer des appareils radioélectriques. Quelles vérifications réglementaires dois-je faire avant de les vendre ?",
+      "Je veux faire homologuer un nouveau modèle de téléphone avant sa commercialisation. Quelles règles s’appliquent ?",
+      "Je veux installer et maintenir des infrastructures de communications électroniques pour des clients. Quels agréments dois-je vérifier ?",
+    ],
+  },
+  {
+    title: "Fréquences et services radio",
+    icon: Globe2,
+    questions: [
+      "Je veux créer une entreprise de services radio utilisant ses propres fréquences. Quelles démarches dois-je entreprendre ?",
+      "Je veux utiliser temporairement des fréquences pour couvrir un festival. Comment puis-je en faire la demande ?",
+      "Je veux lancer un service qui utilise des fréquences disponibles au Cameroun. Dans quels cas un appel à concurrence peut-il être nécessaire ?",
+      "Je veux exploiter une station radioélectrique pour mon entreprise. Quel accord préalable dois-je obtenir ?",
+      "Je veux utiliser une fréquence radio pour un événement ponctuel. Quels éléments faut-il vérifier dans les règles d’assignation ?",
+      "Je veux demander des fréquences pour un nouveau service télécom. Comment la disponibilité des fréquences peut-elle influencer la procédure ?",
+      "Je veux exploiter plusieurs équipements radioélectriques sur différents sites. Quelles autorisations de fréquence dois-je vérifier ?",
+    ],
+  },
+  {
+    title: "Services numériques et commerce en ligne",
+    icon: BookOpen,
+    questions: [
+      "Je veux créer une boutique en ligne au Cameroun. Quelles obligations les textes prévoient-ils envers mes clients ?",
+      "Je veux lancer une plateforme qui fait signer des contrats à distance. Quelles règles sur la signature électronique dois-je vérifier ?",
+      "Je veux créer une entreprise qui collecte les données de ses clients en ligne. Quelles précautions dois-je prendre ?",
+      "Je veux vendre des produits sur Internet. Quelles informations dois-je communiquer au client avant sa commande ?",
+      "Je veux lancer une plateforme de vente en ligne. Quelles règles encadrent la commande et sa confirmation ?",
+      "Je veux proposer un service de certification de signatures électroniques. Quels textes du corpus dois-je consulter ?",
+      "Je veux développer un service numérique qui traite des données personnelles. Quelles obligations de confidentialité dois-je vérifier ?",
+    ],
+  },
+  {
+    title: "Services postaux, livraison et colis",
+    icon: BookOpen,
+    questions: [
+      "Je veux créer une entreprise de livraison de colis au Cameroun. Quelles démarches du secteur postal dois-je suivre ?",
+      "Je veux lancer un service de courrier express entre plusieurs villes. Quel régime postal pourrait s’appliquer ?",
+      "Je veux créer un réseau de points relais pour les colis. Quelles règles postales dois-je vérifier ?",
+      "Je veux proposer la collecte, le tri et la distribution de colis. Une licence postale est-elle prévue par les textes ?",
+      "Je veux lancer un service de courrier accéléré. Quelles obligations sectorielles dois-je vérifier ?",
+      "Je veux créer une entreprise de transfert postal de fonds. Quelles règles spécifiques sont mentionnées dans les textes ?",
+      "Je veux fournir un service postal non réservé. Que prévoient les articles 34 à 38 sur la licence ?",
+    ],
+  },
+  {
+    title: "Télécoms et obligations envers les clients",
+    icon: ShieldCheck,
+    questions: [
+      "Je veux créer un opérateur Internet et utiliser les infrastructures d’un opérateur déjà établi. Comment demander l’accès ou l’interconnexion ?",
+      "Je veux lancer une entreprise de télécommunications avec des forfaits prépayés. Quelles obligations d’identification des abonnés dois-je prévoir, selon les règles compilées en 2023 ?",
+      "Je veux lancer un service mobile qui fonctionne aussi sur le réseau d’autres opérateurs. Quelles règles d’itinérance nationale dois-je vérifier, notamment dans la décision de l’ART du 11 mars 2024 ?",
+      "Je veux vendre des cartes SIM dans des points de vente partenaires. Quelles obligations d’identification des abonnés dois-je respecter ?",
+      "Je veux proposer des forfaits téléphoniques au public. Quelles règles encadrent l’information des abonnés et les tarifs ?",
+      "Je veux créer un service de télécommunications et traiter les réclamations de mes abonnés. Quels textes du corpus peuvent s’appliquer ?",
+      "Je veux partager des infrastructures avec un opérateur télécom existant. Quelles règles d’accès et de partage dois-je vérifier ?",
+    ],
+  },
+  {
+    title: "Idées de business dans un secteur réglementé",
+    icon: Gavel,
+    questions: [
+      "Je veux créer une entreprise de services numériques sans exercer une activité réservée à un opérateur autorisé. Comment vérifier le régime applicable ?",
+      "Je veux lancer un nouveau service qui combine Internet, téléphonie et vente d’équipements. Quelles autorisations pourraient concerner chaque activité ?",
+      "Je veux développer une jeune entreprise dans le secteur des postes ou des télécommunications. Quels textes du corpus dois-je consulter en priorité selon mon activité ?",
+      "Je veux lancer une activité télécom sans construire mon propre réseau. Comment déterminer si une licence, une concession ou une déclaration est nécessaire ?",
+      "Je veux créer une entreprise qui fournit un service au public sur un réseau de communications électroniques. Quel régime d’exploitation dois-je vérifier ?",
+      "Je veux créer une entreprise dans le secteur postal. Comment savoir si mon activité relève d’une licence, d’une concession ou d’un autre régime ?",
+      "Je veux développer une activité réglementée dans les TIC. Comment distinguer les autorisations sectorielles des formalités générales de création d’entreprise ?",
+    ],
+  },
+].flatMap((category) =>
+  category.questions.map((prompt) => ({
+    category: category.title,
+    icon: category.icon,
+    prompt,
+  })),
+);
+
 const topics = [
   { label: "Droits du consommateur", icon: ShieldCheck },
   { label: "Télécommunications", icon: Globe2 },
@@ -135,8 +236,21 @@ export default function Home() {
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllSources, setShowAllSources] = useState(false);
+  const [showQuestionLibrary, setShowQuestionLibrary] = useState(false);
+  const [questionSearch, setQuestionSearch] = useState("");
+  const [questionCategory, setQuestionCategory] = useState("Toutes les catégories");
+  const [questionPage, setQuestionPage] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const filteredBusinessQuestions = businessQuestionCategories.filter(({ prompt, category }) =>
+    (questionCategory === "Toutes les catégories" || category === questionCategory) &&
+    prompt.toLocaleLowerCase("fr").includes(questionSearch.trim().toLocaleLowerCase("fr")),
+  );
+  const questionsPerPage = 8;
+  const visibleBusinessQuestions = filteredBusinessQuestions.slice(
+    questionPage * questionsPerPage,
+    (questionPage + 1) * questionsPerPage,
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -407,7 +521,7 @@ export default function Home() {
                 <span className="suggestion-line" />
               </div>
               <div className="suggestion-grid">
-                {suggestions.map(({ icon: Icon, title, prompt, tint }) => (
+                {starterSuggestions.map(({ icon: Icon, title, prompt, tint }) => (
                   <button
                     className="suggestion-card"
                     key={title}
@@ -423,6 +537,95 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+              <button
+                className="question-library-toggle"
+                type="button"
+                aria-expanded={showQuestionLibrary}
+                onClick={() => setShowQuestionLibrary((current) => !current)}
+              >
+                {showQuestionLibrary ? "Masquer les questions" : "Parcourir les 50 questions"}
+                <ChevronDown className={showQuestionLibrary ? "chevron-open" : ""} size={15} />
+              </button>
+              {showQuestionLibrary && (
+                <section className="question-library" aria-label="Bibliothèque des questions">
+                  <div className="question-library-intro">
+                    <strong>Questions pratiques par activité</strong>
+                    <span>Choisissez une question pour obtenir une réponse fondée sur les documents.</span>
+                  </div>
+                  <div className="question-library-filters">
+                    <input
+                      type="search"
+                      value={questionSearch}
+                      aria-label="Rechercher parmi les 50 questions"
+                      placeholder="Rechercher une question…"
+                      onChange={(event) => {
+                        setQuestionSearch(event.target.value);
+                        setQuestionPage(0);
+                      }}
+                    />
+                    <select
+                      value={questionCategory}
+                      aria-label="Filtrer les questions par activité"
+                      onChange={(event) => {
+                        setQuestionCategory(event.target.value);
+                        setQuestionPage(0);
+                      }}
+                    >
+                      <option>Toutes les catégories</option>
+                      {[...new Set(businessQuestionCategories.map(({ category }) => category))].map(
+                        (category) => <option key={category}>{category}</option>,
+                      )}
+                    </select>
+                  </div>
+                  {visibleBusinessQuestions.length > 0 ? (
+                    <div className="suggestion-grid question-library-grid">
+                      {visibleBusinessQuestions.map(({ icon: Icon, category, prompt }) => (
+                        <button
+                          className="suggestion-card"
+                          key={prompt}
+                          type="button"
+                          onClick={() => void askQuestion(prompt)}
+                        >
+                          <span className="suggestion-icon blue"><Icon size={17} strokeWidth={1.8} /></span>
+                          <span className="suggestion-copy">
+                            <strong>{category}</strong>
+                            <small>{prompt}</small>
+                          </span>
+                          <ArrowLeft className="suggestion-arrow" size={15} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="question-library-empty">Aucune question ne correspond à votre recherche.</p>
+                  )}
+                  <div className="question-library-pagination">
+                    <span>
+                      {filteredBusinessQuestions.length === 0
+                        ? "0 question"
+                        : `${questionPage * questionsPerPage + 1}–${Math.min(
+                            (questionPage + 1) * questionsPerPage,
+                            filteredBusinessQuestions.length,
+                          )} sur ${filteredBusinessQuestions.length} questions`}
+                    </span>
+                    <div>
+                      <button
+                        type="button"
+                        disabled={questionPage === 0}
+                        onClick={() => setQuestionPage((page) => Math.max(0, page - 1))}
+                      >
+                        Précédent
+                      </button>
+                      <button
+                        type="button"
+                        disabled={(questionPage + 1) * questionsPerPage >= filteredBusinessQuestions.length}
+                        onClick={() => setQuestionPage((page) => page + 1)}
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
               <div className="trust-note">
                 <ShieldCheck size={15} />
                 <span>Information générale — pas un avis juridique personnalisé.</span>

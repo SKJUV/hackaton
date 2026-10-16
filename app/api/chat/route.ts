@@ -33,21 +33,10 @@ export async function POST(request: Request) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
   const providerPreference = process.env.LLM_PROVIDER || "auto";
-  if (
+  const missingKey =
     (providerPreference === "groq" && !groqApiKey) ||
     (providerPreference === "gemini" && !geminiApiKey) ||
-    (providerPreference === "auto" && !groqApiKey && !geminiApiKey)
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          providerPreference === "groq"
-            ? "La clé Groq n’est pas configurée. Ajoutez GROQ_API_KEY dans .env.local."
-            : "Configurez GEMINI_API_KEY ou GROQ_API_KEY dans .env.local.",
-      },
-      { status: 503 },
-    );
-  }
+    (providerPreference === "auto" && !groqApiKey && !geminiApiKey);
 
   let chunks;
   try {
@@ -77,6 +66,18 @@ export async function POST(request: Request) {
   }
 
   const citations = getCitations(results, chunks);
+  if (missingKey) {
+    // Mode démo (aucune clé IA) : on restitue les extraits officiels sans reformulation.
+    const answer = [
+      "**Mode démo — aucune clé IA configurée.** Voici les passages du corpus les plus pertinents, cités sans reformulation :",
+      ...citations.slice(0, 3).map(
+        (c) => `- **${c.legalTitle ?? c.title}**, page ${c.page}${c.articles.length ? `, art. ${c.articles.slice(0, 3).join(", ")}` : ""} : « ${c.excerpt.slice(0, 320).trim()}… » [${c.id}]`,
+      ),
+      "Pour une explication rédigée, configurez GROQ_API_KEY ou GEMINI_API_KEY dans .env.local.",
+    ].join("\n\n");
+    return NextResponse.json({ answer, citations, mode: "demo" });
+  }
+
   const sourceContext = formatSourceContext(citations);
   const citationMarkers = citations.map((citation) => `[${citation.id}]`).join(", ");
 

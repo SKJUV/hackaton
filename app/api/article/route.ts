@@ -50,22 +50,24 @@ type EgovaDocument = {
 let cachedDb: { documents: EgovaDocument[] } | null = null;
 let cachedArticles: EgovaArticle[] | null = null;
 
+async function readOptional<T>(file: string, fallback: T): Promise<T> {
+  try {
+    return JSON.parse(await readFile(path.join(process.cwd(), "data", file), "utf8")) as T;
+  } catch (error) {
+    // Les bases eGova sont générées hors dépôt (gitignore) : absentes sur un clone neuf.
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return fallback;
+    throw error;
+  }
+}
+
 async function loadEgovaData() {
   if (!cachedDb) {
-    const dbRaw = await readFile(
-      path.join(process.cwd(), "data", "base_de_donnees_reglementation.json"),
-      "utf8",
-    );
-    cachedDb = JSON.parse(dbRaw);
+    cachedDb = await readOptional<{ documents: EgovaDocument[] }>("base_de_donnees_reglementation.json", { documents: [] });
   }
   if (!cachedArticles) {
-    const artRaw = await readFile(
-      path.join(process.cwd(), "data", "reglementation_articles_index.json"),
-      "utf8",
-    );
-    cachedArticles = JSON.parse(artRaw);
+    cachedArticles = await readOptional<EgovaArticle[]>("reglementation_articles_index.json", []);
   }
-  return { db: cachedDb!, articles: cachedArticles! };
+  return { db: cachedDb, articles: cachedArticles };
 }
 
 export async function GET(request: Request) {

@@ -802,6 +802,47 @@ textarea:focus-visible {
   white-space: pre-wrap;
 }
 
+.message-text p {
+  margin: 0 0 10px;
+}
+
+.message-text p:last-child {
+  margin-bottom: 0;
+}
+
+.message-text h3 {
+  margin: 16px 0 7px;
+  color: #39483e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.message-text ul,
+.message-text ol {
+  display: grid;
+  gap: 5px;
+  margin: 7px 0 12px;
+  padding-left: 20px;
+}
+
+.message-text li {
+  padding-left: 2px;
+}
+
+.message-text strong {
+  color: #35443a;
+  font-weight: 700;
+}
+
+.source-marker {
+  display: inline-block;
+  margin-left: 2px;
+  color: #65806a;
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: super;
+}
+
 .sources-block {
   margin-top: 16px;
   padding: 12px;

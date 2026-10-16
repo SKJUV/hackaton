@@ -17,7 +17,66 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState, type ReactNode } from "react";
+
+function renderInline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (/^\[S\d+\]$/.test(part)) {
+      return <span className="source-marker" key={index}>{part}</span>;
+    }
+    return part;
+  });
+}
+
+function formatAnswer(text: string): ReactNode[] {
+  const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      blocks.push(<h3 key={index}>{renderInline(heading[2])}</h3>);
+      index += 1;
+      continue;
+    }
+
+    const listItem = line.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+    if (listItem) {
+      const ordered = /^\d+[.)]/.test(line);
+      const items: ReactNode[] = [];
+      while (index < lines.length) {
+        const match = lines[index].trim().match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+        if (!match || /^\d+[.)]/.test(lines[index].trim()) !== ordered) break;
+        items.push(<li key={index}>{renderInline(match[1])}</li>);
+        index += 1;
+      }
+      blocks.push(ordered ? <ol key={`list-${index}`}>{items}</ol> : <ul key={`list-${index}`}>{items}</ul>);
+      continue;
+    }
+
+    const paragraph = [line];
+    index += 1;
+    while (index < lines.length && lines[index].trim()) {
+      const nextLine = lines[index].trim();
+      if (/^(#{1,3})\s+/.test(nextLine) || /^(?:[-*•]|\d+[.)])\s+/.test(nextLine)) break;
+      paragraph.push(nextLine);
+      index += 1;
+    }
+    blocks.push(<p key={index}>{renderInline(paragraph.join(" "))}</p>);
+  }
+
+  return blocks;
+}
 
 type Citation = {
   id: string;
@@ -387,7 +446,7 @@ export default function Home() {
                       {message.role === "user" ? "Vous" : "Droit.cm"}
                       {message.role === "assistant" && <span className="answer-source-label"><Sparkles size={12} /> Réponse documentée</span>}
                     </div>
-                    <div className="message-text">{message.content}</div>
+                    <div className="message-text">{message.role === "assistant" ? formatAnswer(message.content) : message.content}</div>
                     {message.role === "assistant" && message.citations && message.citations.length > 0 && (
                       <div className="sources-block">
                         <div className="sources-title">

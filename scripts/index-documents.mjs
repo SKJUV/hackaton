@@ -167,7 +167,7 @@ async function main() {
                 );
               }
               ocrScheduler = createScheduler();
-              const workerCount = Math.min(2, availableParallelism());
+              const workerCount = Math.min(4, availableParallelism());
               console.log(`Loading local OCR models (${workerCount} parallel workers)...`);
               for (let workerIndex = 0; workerIndex < workerCount; workerIndex += 1) {
                 const worker = await createWorker("fra+eng", undefined, {
@@ -182,7 +182,7 @@ async function main() {
             }
             await run("pdftoppm", [
               "-f", String(pageIndex + 1), "-l", String(pageIndex + 1),
-              "-scale-to", "1800", "-png", "-singlefile", absolutePath, imageBase,
+              "-scale-to", "1600", "-png", "-singlefile", absolutePath, imageBase,
             ]);
             const recognition = ocrScheduler.addJob("recognize", imagePath);
             pendingOcr.push(

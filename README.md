@@ -19,13 +19,13 @@ Dans `.env.local`, ajoute une clé **nouvellement créée** dans Google AI Studi
 
 ```dotenv
 GEMINI_API_KEY=your_private_key
-GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MODEL=gemini-3.5-flash
 GROQ_API_KEY=
 GROQ_MODEL=openai/gpt-oss-120b
 LLM_PROVIDER=auto
 ```
 
-Groq est une API distincte : crée une clé gratuite sur [console.groq.com](https://console.groq.com/) si tu veux l'utiliser. Quand les deux clés sont configurées, `LLM_PROVIDER=auto` essaie Groq puis Gemini, avec un modèle Gemini de secours en cas de surcharge. Tu peux choisir `groq` ou `gemini` avec `LLM_PROVIDER`. N'ajoute jamais une clé API au code client, au dépôt Git ou à une conversation publique. Redémarre le serveur après avoir modifié `.env.local`.
+Groq est une API distincte : crée une clé gratuite sur [console.groq.com](https://console.groq.com/) si tu veux l'utiliser. Quand les deux clés sont configurées, `LLM_PROVIDER=auto` essaie Groq puis Gemini, avec `gemini-3.5-flash-lite` en secours si le modèle Gemini principal est surchargé. Tu peux choisir `groq` ou `gemini` avec `LLM_PROVIDER`. N'ajoute jamais une clé API au code client, au dépôt Git ou à une conversation publique. Redémarre le serveur après avoir modifié `.env.local`.
 
 Prépare ensuite l'index documentaire et démarre l'application :
 
@@ -46,7 +46,7 @@ Pour appliquer l'OCR aux pages qui ne contiennent presque aucun texte extractibl
 npm run index-documents -- --ocr
 ```
 
-Cette option utilise Tesseract.js avec les modèles français et anglais fournis par les dépendances du projet ; aucune installation système de Tesseract n'est nécessaire. Les modèles sont lus localement depuis `node_modules/`. Vérifie les résultats OCR avant de considérer le texte reconnu comme exact. Sans OCR, les pages image uniquement ne seront pas recherchables.
+Cette option utilise Tesseract.js avec les modèles français et anglais fournis par les dépendances du projet ; aucune installation système de Tesseract n'est nécessaire. Les modèles sont lus localement depuis `node_modules/`, avec jusqu'à quatre workers et une résolution de rendu réduite pour accélérer l'indexation. Vérifie les résultats OCR avant de considérer le texte reconnu comme exact. Sans OCR, les pages image uniquement ne seront pas recherchables.
 
 ## Limites
 

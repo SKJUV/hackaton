@@ -50,12 +50,94 @@ function terms(text: string): string[] {
     ?.filter((term) => !stopWords.has(term)) ?? [];
 }
 
+const relatedLegalTerms: Record<string, string[]> = {
+  cybercriminalite: [
+    "infraction",
+    "frauduleux",
+    "acces",
+    "systeme",
+    "informatique",
+    "interception",
+    "atteinte",
+    "integrite",
+  ],
+  cybersecurite: [
+    "securite",
+    "systeme",
+    "information",
+    "reseau",
+    "donnees",
+    "protection",
+  ],
+  donnees: ["personnelles", "vie", "privee", "collecte", "traitement"],
+  consommateur: ["usager", "client", "abonne", "reclamation", "plainte"],
+  operateur: ["telecommunications", "communications", "electroniques", "abonne"],
+  facture: ["facturation", "tarif", "paiement", "contestation"],
+  recours: ["plainte", "reclamation", "conciliation", "arbitrage", "reparation"],
+};
+
+const operatorSetupTerms = [
+  "concession",
+  "licence",
+  "autorisation",
+  "appel",
+  "concurrence",
+  "cahier",
+  "charges",
+  "demande",
+  "reseau",
+  "couverture",
+  "redevances",
+  "entree",
+];
+
+function isPrimarySource(source: string): boolean {
+  const normalized = source.toLocaleLowerCase("fr");
+  return (
+    normalized.startsWith("reglementation/lois/") ||
+    normalized.startsWith("reglementation/décret/") ||
+    normalized.startsWith("reglementation/arrete/") ||
+    normalized.startsWith("reglementation/decision/") ||
+    normalized.includes("recueil")
+  );
+}
+
 export function searchDocuments(
   query: string,
   chunks: DocumentChunk[],
   limit = 6,
 ): SearchResult[] {
-  const queryTerms = [...new Set(terms(query))];
+  const originalQueryTerms = terms(query);
+  const asksAboutStartingTelecomActivity =
+    originalQueryTerms.some((term) =>
+      ["operateur", "telecom", "telecommunications"].includes(term),
+    ) &&
+    originalQueryTerms.some((term) =>
+      [
+        "devenir",
+        "creer",
+        "lancer",
+        "ouvrir",
+        "obtenir",
+        "demarche",
+        "demarches",
+        "procedure",
+        "procedures",
+        "condition",
+        "conditions",
+        "exploiter",
+      ].includes(term),
+    );
+  const asksAboutChildren = originalQueryTerms.some((term) =>
+    ["enfant", "enfants", "mineur", "mineurs", "parental"].includes(term),
+  );
+  const queryTerms = [
+    ...new Set([
+      ...originalQueryTerms,
+      ...originalQueryTerms.flatMap((term) => relatedLegalTerms[term] ?? []),
+      ...(asksAboutStartingTelecomActivity ? operatorSetupTerms : []),
+    ]),
+  ];
   if (queryTerms.length === 0 || chunks.length === 0) return [];
 
   const documentFrequency = new Map<string, number>();
@@ -104,10 +186,11 @@ export function searchDocuments(
         sourcePath.startsWith("reglementation/lois/") ||
         sourcePath.startsWith("reglementation/décret/") ||
         sourcePath.startsWith("reglementation/arrete/") ||
-        sourcePath.startsWith("reglementation/decision/") ||
-        sourcePath.startsWith("reglementation/directives/");
-      const isLegalCompilation =
-        sourcePath.includes("recueil") || sourcePath.includes("recueil de texte");
+        sourcePath.startsWith("reglementation/decision/");
+      const isRegionalDirective =
+        sourcePath.startsWith("reglementation/directives/") ||
+        sourcePath.includes("cemac");
+      const isLegalCompilation = sourcePath.includes("recueil");
       const isOfficialLegalSource =
         isOfficialRegulation ||
         (isLegalCompilation &&
@@ -115,6 +198,8 @@ export function searchDocuments(
             chunk.title.toLocaleLowerCase("fr").includes("textes")));
       const sourceWeight = isOfficialRegulation
         ? 2.2
+        : isRegionalDirective
+          ? 0.9
         : isOfficialLegalSource
           ? 1.7
           : isLegalCompilation
@@ -122,21 +207,81 @@ export function searchDocuments(
             : sourcePath.startsWith("publications/appel")
               ? 0.25
               : 0.55;
+      const childSpecificPenalty =
+        !asksAboutChildren &&
+        /\b(enfant|enfants|mineur|mineurs|parental|scolaire)\b/i.test(chunk.text)
+          ? 0.2
+          : 1;
+      const licensingProcedureBoost =
+        asksAboutStartingTelecomActivity &&
+        sourcePath.startsWith("reglementation/lois/") &&
+        /appel(?:s)?\s+(?:à|a)\s+concurrence|cahier(?:s)?\s+de(?:s)?\s+charge(?:s)?|convention de concession|droit d['’]entrée|personne morale adjudicataire/i.test(
+          chunk.text,
+        )
+          ? 3
+          : 1;
+      const licenseScopeBoost =
+        asksAboutStartingTelecomActivity &&
+        sourcePath.startsWith("reglementation/lois/") &&
+        /réseaux?\s+(?:expérimentaux|virtuels)|réseaux?\s+de\s+collecte|zones?\s+rurales/i.test(
+          chunk.text,
+        )
+          ? 5.5
+          : 1;
+      const frequencyLicensingBoost =
+        asksAboutStartingTelecomActivity &&
+        sourcePath.startsWith("reglementation/lois/") &&
+        /article\s*12|disponibilité des fréquences|appel à concurrence/i.test(
+          chunk.text,
+        )
+          ? 4
+          : 1;
+      const concessionApprovalBoost =
+        asksAboutStartingTelecomActivity &&
+        sourcePath.startsWith("reglementation/lois/") &&
+        /convention de concession|approuvés? par décret du Président/i.test(chunk.text)
+          ? 2.5
+          : 1;
 
-      return { ...chunk, score: score * sourceWeight };
+      return {
+        ...chunk,
+        score:
+          score *
+          sourceWeight *
+          childSpecificPenalty *
+          licensingProcedureBoost *
+          licenseScopeBoost *
+          frequencyLicensingBoost *
+          concessionApprovalBoost,
+      };
     })
     .filter((result) => result.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  const bestPerDocument = new Map<string, SearchResult>();
+  const selectedResults: SearchResult[] = [];
+  const resultCountByDocument = new Map<string, number>();
+  const selectedSourcePages = new Set<string>();
   for (const result of results) {
-    const current = bestPerDocument.get(result.source);
-    if (!current || result.score > current.score) {
-      bestPerDocument.set(result.source, result);
+    const primarySource = isPrimarySource(result.source);
+    const currentCount = resultCountByDocument.get(result.source) ?? 0;
+    const sourcePage = `${result.source}:${result.page}`;
+    if (asksAboutStartingTelecomActivity && selectedSourcePages.has(sourcePage)) {
+      continue;
     }
+    const perDocumentLimit = primarySource
+      ? asksAboutStartingTelecomActivity &&
+        result.source.toLocaleLowerCase("fr").startsWith("reglementation/lois/")
+        ? 4
+        : 2
+      : 1;
+    if (currentCount >= perDocumentLimit) continue;
+    resultCountByDocument.set(result.source, currentCount + 1);
+    selectedSourcePages.add(sourcePage);
+    selectedResults.push(result);
+    if (selectedResults.length === limit) break;
   }
 
-  return [...bestPerDocument.values()]
+  return selectedResults
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }

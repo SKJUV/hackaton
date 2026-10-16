@@ -1,15 +1,14 @@
-import { NextResponse } from "next/server";
 import { runAgent, type AgentTurn } from "@/lib/agent/runner";
 import { newId, nowIso, readData, withData } from "@/lib/workspace/store";
 import { log, WorkspaceError } from "@/lib/workspace/service";
-import { handle, readJson, s } from "@/lib/workspace/http";
+import { handlePaid, readJson, s } from "@/lib/workspace/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 /** Agent co-fondateur : function-calling sur les outils du workspace. */
 export async function POST(request: Request) {
-  return handle(async () => {
+  return handlePaid(async () => {
     const b = await readJson(request);
     const companyId = s(b.companyId);
     const message = s(b.message).trim();
@@ -37,8 +36,10 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const companyId = new URL(request.url).searchParams.get("companyId") ?? "";
-  await withData((d) => {
-    d.messages = d.messages.filter((m) => m.companyId !== companyId);
+  return handlePaid(async () => {
+    await withData((d) => {
+      d.messages = d.messages.filter((m) => m.companyId !== companyId);
+    });
+    return { ok: true };
   });
-  return NextResponse.json({ ok: true });
 }

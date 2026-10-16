@@ -2075,3 +2075,6 @@ select:focus-visible {
 }
 .workspace-link:hover { background: var(--accent-glow); }
 @media (max-width: 640px) { .workspace-link span { display: none; } }
+.topbar-text-link { color: var(--text-secondary); font-size: 13px; font-weight: 600; text-decoration: none; padding: 6px 4px; }
+.topbar-text-link:hover { color: var(--accent); }
+@media (max-width: 640px) { .topbar-text-link { display: none; } }

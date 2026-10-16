@@ -1,13 +1,13 @@
 import { generateBusinessPlan, generateLegalDocument, generateRoadmap, LEGAL_TEMPLATE_LABELS, type LegalTemplateKind } from "@/lib/cofounder/generators";
 import { getSnapshot, saveDocument, WorkspaceError } from "@/lib/workspace/service";
-import { handle, readJson, s } from "@/lib/workspace/http";
+import { handlePaid, readJson, s } from "@/lib/workspace/http";
 import type { DocumentKind } from "@/lib/workspace/types";
 
 export const runtime = "nodejs";
 
 /** Crée un document libre ou génère un document depuis un modèle (`generate`). */
 export async function POST(request: Request) {
-  return handle(async () => {
+  return handlePaid(async () => {
     const b = await readJson(request);
     const companyId = s(b.companyId);
     const generate = s(b.generate);

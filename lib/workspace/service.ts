@@ -35,9 +35,18 @@ const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
 /* ---------------------------------------------------------------- Lecture */
 
-export async function getSnapshot(companyId?: string) {
+/** Entreprises visibles : celles dont l'utilisateur est membre (par email) + les entreprises de démo. */
+export function visibleCompanies(data: WorkspaceData, viewerEmail?: string | null) {
+  if (viewerEmail === undefined) return data.companies;
+  const email = viewerEmail?.toLowerCase();
+  const mine = new Set(data.members.filter((m) => email && m.email.toLowerCase() === email).map((m) => m.companyId));
+  return data.companies.filter((c) => c.isExample || mine.has(c.id));
+}
+
+export async function getSnapshot(companyId?: string, viewerEmail?: string | null) {
   const data = await readData();
-  const company = data.companies.find((c) => c.id === companyId) ?? data.companies[0];
+  const companies = visibleCompanies(data, viewerEmail);
+  const company = companies.find((c) => c.id === companyId) ?? companies.find((c) => !c.isExample) ?? companies[0];
   if (!company) throw new WorkspaceError("Aucune entreprise.", 404);
   const id = company.id;
   const by = <T extends { companyId: string }>(list: T[]) => list.filter((x) => x.companyId === id);
@@ -45,7 +54,7 @@ export async function getSnapshot(companyId?: string) {
   const obligations = by(data.obligations).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const documents = by(data.documents).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return {
-    companies: data.companies,
+    companies,
     company,
     members: by(data.members),
     documents,

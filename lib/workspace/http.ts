@@ -21,3 +21,11 @@ export async function handle(fn: () => Promise<unknown>) {
 }
 
 export const s = (v: unknown) => (typeof v === "string" ? v : "");
+
+/** Variante protégée : l'assistant (workspace + agent) fait partie de l'offre payante. */
+export async function handlePaid(fn: () => Promise<unknown>) {
+  const { assistantGuard } = await import("@/lib/auth/current");
+  const { denied } = await assistantGuard();
+  if (denied) return denied;
+  return handle(fn);
+}

@@ -1,13 +1,13 @@
 import { readData } from "@/lib/workspace/store";
 import { decideApproval, WorkspaceError } from "@/lib/workspace/service";
-import { handle, readJson, s } from "@/lib/workspace/http";
+import { handlePaid, readJson, s } from "@/lib/workspace/http";
 
 export const runtime = "nodejs";
 
 /** Validation humaine d'une action externe (envoi d'email, demande de devis, relance). */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return handle(async () => {
+  return handlePaid(async () => {
     const b = await readJson(request);
     const decision = s(b.decision);
     if (decision !== "approuver" && decision !== "rejeter") throw new WorkspaceError("Décision invalide.");

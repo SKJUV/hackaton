@@ -38,6 +38,8 @@ import {
   type TabProps,
 } from "@/components/workspace/Tabs";
 import { api, Badge } from "@/components/workspace/ui";
+import { Paywall } from "@/components/workspace/Paywall";
+import { getMe, type Me } from "@/components/auth/client";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Snapshot } from "@/lib/workspace/service";
 
@@ -67,13 +69,19 @@ export default function WorkspacePage() {
   const [toast, setToast] = useState<{ text: string; type: string } | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [error, setError] = useState("");
+  const [me, setMe] = useState<Me | null>(null);
 
   const load = useCallback(async (id?: string) => {
     try {
       const data = await api<Snapshot>(`/api/workspace${id ? `?companyId=${id}` : ""}`);
       setSnap(data);
       setError("");
-      setMemberId((current) => (data.members.some((m) => m.id === current) ? current : data.members[0]?.id ?? ""));
+      const self = await getMe().catch(() => null);
+      setMemberId((current) =>
+        data.members.some((m) => m.id === current)
+          ? current
+          : data.members.find((m) => self?.user && m.email.toLowerCase() === self.user.email)?.id ?? data.members[0]?.id ?? "",
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur de chargement");
     }
@@ -82,7 +90,10 @@ export default function WorkspacePage() {
   useEffect(() => {
     const saved = localStorage.getItem("ws-company") ?? undefined;
     setCompanyId(saved);
-    void load(saved);
+    void getMe().then((m) => {
+      setMe(m);
+      if (m.assistantAccess) void load(saved);
+    });
     const t = localStorage.getItem("droit-cm-theme");
     if (t) document.documentElement.setAttribute("data-theme", t);
   }, [load]);
@@ -108,6 +119,7 @@ export default function WorkspacePage() {
     notify("Workspace de démonstration réinitialisé", "info");
   }
 
+  if (me && !me.assistantAccess) return <Paywall me={me} />;
   if (error && !snap) return <div className="ws-loading">{error}</div>;
   if (!snap) return <div className="ws-loading">Chargement du workspace…</div>;
 
@@ -140,6 +152,14 @@ export default function WorkspacePage() {
           <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
             {snap.members.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.role}</option>)}
           </select>
+          {me?.user && (
+            <div className="ws-account">
+              <span title={me.user.email}>{me.user.name}</span>
+              <a href="/compte">Compte</a>
+              <a href="/tarifs">Abonnement</a>
+              <a href="/deconnexion">Déconnexion</a>
+            </div>
+          )}
           <div className="ws-foot-row">
             <ThemeToggle />
             <button className="ws-icon-btn" title="Réinitialiser la démo" onClick={() => void resetDemo()}><RotateCcw size={15} /></button>

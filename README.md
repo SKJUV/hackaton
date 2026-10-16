@@ -20,8 +20,13 @@ npm run index-documents         # indexe les 89 PDF officiels → data/documents
 npm run dev
 ```
 
-- Assistant juridique (chat) : http://localhost:3000
-- **Workspace entreprise / agent** : http://localhost:3000/workspace
+- Assistant juridique (chat, **gratuit, sans compte**) : http://localhost:3000
+- **Co-fondateur IA / workspace** (abonnement) : http://localhost:3000/workspace
+- Tarifs : http://localhost:3000/tarifs · Connexion : http://localhost:3000/connexion
+
+Accès démo le plus rapide : sur `/workspace` ou `/connexion`, cliquez **« Freddy Choudja (démo · abonné) »**
+(abonnement simulé déjà actif). « Awa Mbarga (démo · gratuit) » montre le paywall ; « Continuer en démo »
+crée une session invité, qui peut activer l'abonnement en simulation depuis `/tarifs`.
 
 Autres commandes : `npm test` (vitest), `npm run typecheck`, `npm run build`,
 `npm run ingest-corpus` (textes officiels Markdown/JSON), `npm run index-documents -- --ocr` (OCR des scans).
@@ -41,6 +46,34 @@ Autres commandes : `npm test` (vitest), `npm run typecheck`, `npm run build`,
 | **Veille réglementaire** | Croise les mots-clés du secteur de l'entreprise avec le corpus officiel ; les nouveaux textes déposés par l'État remontent en priorité. |
 | **Workspace multi-entreprise** | Plusieurs entreprises, membres et rôles, journal d'audit de toutes les actions (agent et humains). |
 
+## Connexion (jamais bloquante)
+
+| Moyen | Détail |
+|---|---|
+| Code à 6 chiffres / lien magique | `/connexion` : saisir un email → code + lien valables 30 min. En `MAIL_MODE=simulation`, le code est **affiché directement** et visible dans `/connexion/boite-demo` (aucun email réel). |
+| Continuer en démo | Session invité immédiate, sans email ni mot de passe. |
+| Comptes démo | Un clic : « Freddy (démo · abonné) », « Awa (démo · gratuit) ». |
+| Inscription | `/inscription` : accès immédiat, sans vérification bloquante ; mot de passe **facultatif**. |
+| Mot de passe | Facultatif, défini/supprimé dans `/compte`. En cas d'oubli : `/mot-de-passe-oublie` envoie un code/lien qui connecte directement. |
+| Déconnexion | `/deconnexion`. |
+
+Sessions : cookie HttpOnly signé HMAC-SHA256 avec `AUTH_SECRET` (défaut de développement si absent —
+à définir en production). Le chat juridique, la recherche et la lecture des textes ne demandent aucun compte.
+
+## Abonnement
+
+| Plan | Contenu | Prix |
+|---|---|---|
+| Gratuit | Chat juridique sourcé, recherche dans le corpus, lecture des articles et PDF, voix, PWA | 0 FCFA |
+| Co-fondateur IA | Agent qui agit, workspace, emails, fournisseurs, documents, conformité, veille | **9 900 FCFA/mois — prix d'exemple à confirmer** |
+| Équipe / Incubateur | Idem, orienté multi-entreprises | **29 900 FCFA/mois — prix d'exemple à confirmer** |
+
+- Les prix se règlent par `PRICE_COFONDATEUR_XAF` / `PRICE_EQUIPE_XAF` ; tant qu'ils ne sont pas définis, la page affiche « Prix d'exemple ».
+- Les limites « 1 entreprise / 3 membres » sont **indicatives** et **non appliquées** techniquement : les deux plans payants débloquent tout l'assistant.
+- Paywall : `/workspace` affiche une page d'offre (CTA démo + plans) ; les API `/api/workspace/*` et `/api/agent` renvoient 401/402. `BILLING_PAYWALL=off` ouvre tout.
+- Paiement : `PAYMENT_PROVIDER=simulation` (défaut, bouton « Activer (démo) ») ou `cinetpay` / `notchpay` (Mobile Money) / `stripe` (carte). Retour `/api/billing/return`, webhooks `/api/billing/webhook/{cinetpay|notchpay|stripe}` (signature vérifiée et statut re-vérifié auprès du prestataire). Si le prestataire choisi est incomplet, repli automatique en simulation. Les comptes démo/invités peuvent toujours activer en simulation.
+- ⚠️ Les intégrations CinetPay, NotchPay et Stripe sont écrites d'après leur documentation publique mais **n'ont pas été testées** contre les API réelles (aucune clé) : à valider en sandbox. Campay n'est pas encore branché.
+
 ## Réel vs seedé (démo)
 
 | Élément | Statut |
@@ -55,6 +88,9 @@ Autres commandes : `npm test` (vitest), `npm run typecheck`, `npm run build`,
 | Envoi d'emails | `MAIL_MODE=simulation` par défaut : aucun envoi réseau. `live` + Resend/SMTP = envoi réel après validation |
 | Agent | Réel avec une clé (Groq, Gemini ou compatible OpenAI). **Sans clé : planificateur à règles** qui appelle exactement les mêmes outils (badge « Mode démo ») |
 | Chat juridique (`/`) | Réel avec une clé ; sans clé, restitue les extraits officiels sans reformulation |
+| Codes de connexion / liens magiques | Réels (usage unique, 30 min) ; l'email est simulé en `MAIL_MODE=simulation` |
+| Comptes « (démo) » et abonnement de Freddy (démo) | Seed |
+| Paiement | Simulé par défaut ; prestataires réels activables par variables d'env (non testés) |
 
 ## Variables d'environnement
 
@@ -67,6 +103,10 @@ Voir `.env.example`. Résumé :
 | `MAIL_MODE` | `simulation` (défaut) ou `live` |
 | `MAIL_PROVIDER`, `MAIL_FROM`, `RESEND_API_KEY`, `SMTP_*` | Envoi réel en mode `live` |
 | `WORKSPACE_DB_PATH` | Emplacement de la base JSON du workspace |
+| `AUTH_SECRET`, `APP_URL` | Signature des sessions (obligatoire en prod) ; URL publique pour les liens magiques et retours de paiement |
+| `BILLING_PAYWALL` | `on` (défaut) / `off` |
+| `PRICE_COFONDATEUR_XAF`, `PRICE_EQUIPE_XAF` | Prix réels (sinon prix d'exemple affichés) |
+| `PAYMENT_PROVIDER` + `CINETPAY_*`, `NOTCHPAY_*`, `STRIPE_*` | Paiement réel |
 
 Les clés restent côté serveur ; elles ne sont jamais renvoyées au navigateur ni journalisées.
 
@@ -95,17 +135,26 @@ lib/
   legal/                      citations (articles, recueils), corpus unifié officiel + exemples
   cofounder/                  business plan, roadmap, trames juridiques
   compliance/                 score de conformité, veille
+  auth/                       sessions signées, codes/liens magiques, invité, démo, mot de passe optionnel
+  billing/                    plans, abonnements, prestataires (simulation, CinetPay, NotchPay, Stripe)
+app/(compte)/                 connexion, inscription, mot de passe oublié, déconnexion, compte, tarifs
 corpus/officiel | exemples    textes de l'État | seeds d'exemple
-tests/                        vitest (22 tests)
+tests/                        vitest (34 tests)
 ```
 
 La persistance est un fichier JSON (`data/workspace.db.json`, ignoré par git) derrière
 `readData`/`withData` : remplaçable par Postgres/SQLite sans toucher aux routes.
 Le bouton ↺ du workspace réinitialise les données de démonstration.
 
+## Intégration d'ai-cofounder-studio
+
+Le dépôt https://github.com/Noah12345578/ai-cofounder-studio était **vide** (aucun commit, aucune branche)
+lors de l'intégration (16/10/2026) : rien n'a pu être repris ni forké. Voir `docs/AI_COFOUNDER_STUDIO.md`.
+
 ## Limites connues
 
-- Pas d'authentification : le sélecteur « Je suis » simule l'utilisateur courant.
+- Le sélecteur « Je suis » du workspace choisit le membre qui valide les actions (par défaut, celui dont l'email correspond au compte connecté).
+- Autorisation fine par entreprise à compléter : la liste est filtrée par utilisateur, mais les actions par identifiant (approbation, devis…) ne vérifient pas encore l'appartenance.
 - Stockage fichier : adapté à la démo et à un serveur unique, pas au serverless multi-instance.
 - Corpus actuel centré postes/télécoms/TIC, cybersécurité, commerce électronique, consommation, concurrence :
   le droit des sociétés, la fiscalité et le droit social sont à fournir (en attendant, exemples marqués).

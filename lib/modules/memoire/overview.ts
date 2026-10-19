@@ -1,5 +1,5 @@
 import { readData } from "@/lib/workspace/store";
-import { listAttestations, publicKeyInfo } from "./attestations";
+import { listAttestations, publicKeyInfo, verificationPath } from "./attestations";
 import { computeScore, METHODOLOGY } from "./score";
 import { ensureMemoireSeed } from "./seed";
 import { readMemo } from "./store";
@@ -22,7 +22,7 @@ export async function memoireOverview(companyId: string) {
   return {
     decisions: m.decisions.filter((d) => d.companyId === companyId).sort((a, b) => b.decidedAt.localeCompare(a.decidedAt)),
     meetings: m.meetings.filter((x) => x.companyId === companyId).sort((a, b) => b.date.localeCompare(a.date)),
-    attestations: (await listAttestations(companyId)).map((a) => ({ id: a.id, score: a.payload.score, level: a.payload.level, issuedAt: a.payload.issuedAt, expiresAt: a.payload.expiresAt, revokedAt: a.revokedAt, demo: a.payload.demo })),
+    attestations: (await listAttestations(companyId)).map((a) => ({ id: a.id, score: a.payload.score, level: a.payload.level, issuedAt: a.payload.issuedAt, expiresAt: a.payload.expiresAt, revokedAt: a.revokedAt, demo: a.payload.demo, verifyPath: verificationPath(a) })),
     score: computeScore(data, companyId),
     methodology: METHODOLOGY,
     signing: { algorithm: key.algorithm, keyId: key.keyId, source: key.source, storage: key.storage },

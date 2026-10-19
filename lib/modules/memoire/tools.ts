@@ -1,5 +1,5 @@
 import { legalBasis, type AgentTool, type ToolContext } from "@/lib/agent/tools";
-import { currentScore, issueAttestation } from "./attestations";
+import { currentScore, issueAttestation, verificationPath } from "./attestations";
 import { basisData, snapshotLines, toSnapshot } from "./legal";
 import { liteBriefing } from "./lite";
 import { listMeetings, recordMeeting, savePvDocument, whatIMissed } from "./meetings";
@@ -14,7 +14,7 @@ import type { DecisionStatus } from "./types";
  */
 const str = (v: unknown, fallback = "") => (typeof v === "string" ? v : fallback);
 const strArr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? v.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean) : []);
-const verifyUrl = (id: string) => `${(process.env.APP_URL ?? "").replace(/\/$/, "")}/verifier/${id}`;
+const verifyUrl = (path: string) => `${(process.env.APP_URL ?? "").replace(/\/$/, "")}${path}`;
 
 export const MEMOIRE_TOOLS: AgentTool[] = [
   {
@@ -136,7 +136,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
       const att = await issueAttestation(ctx.companyId, "agent");
       return {
         summary: `Attestation signée : ${att.payload.score}/100 — vérifiable sur /verifier/${att.id}`,
-        data: { attestationId: att.id, url_verification: verifyUrl(att.id), score: att.payload.score, cle: att.payload.keyId, demo: att.payload.demo, expire_le: att.payload.expiresAt.slice(0, 10) },
+        data: { attestationId: att.id, url_verification: verifyUrl(verificationPath(att)), score: att.payload.score, cle: att.payload.keyId, demo: att.payload.demo, expire_le: att.payload.expiresAt.slice(0, 10) },
       };
     },
   },

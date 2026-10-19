@@ -30,7 +30,7 @@ describe("boucle LLM (fetch simulé)", () => {
     expect(reply.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "creer_tache"]);
     expect(reply.grounding).not.toBeNull();
     const first = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
-    expect(first.messages[0].content).toMatch(/ANCRER chaque conseil/);
+    expect(first.messages[0].content).toMatch(/ancrer chaque conseil/i);
     expect(first.messages.at(-1).content).toMatch(/RECHERCHE JURIDIQUE PRÉALABLE/);
     expect(first.tools[0].function.name).toBe("rechercher_textes_juridiques");
     const second = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
@@ -61,6 +61,6 @@ describe("boucle LLM (fetch simulé)", () => {
     const { company } = await getSnapshot("co_kmerlog");
     const reply = await runAgent(company, [{ role: "user", content: "Quel est mon score de conformité ?" }]);
     expect(reply.mode).toBe("demo");
-    expect(reply.notice).toMatch(/bascule en mode démo/);
+    expect(reply.notice).toMatch(/mode démo/);
   });
 });

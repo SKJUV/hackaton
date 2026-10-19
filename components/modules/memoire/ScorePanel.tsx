@@ -84,7 +84,7 @@ export default function ScorePanel({ snap, memberId, notify }: TabProps) {
                   <span className="ws-muted">émise le {fmtDate(a.issuedAt, true)} · expire le {fmtDate(a.expiresAt)}</span>
                   {a.demo && <Badge tone="amber">Démo</Badge>}
                   {a.revokedAt ? <Badge tone="rose">Révoquée</Badge> : <Badge tone="green">Active</Badge>}
-                  <a className="ws-link" href={`/verifier/${a.id}`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> /verifier/{a.id}</a>
+                  <a className="ws-link" href={a.verifyPath ?? `/verifier/${a.id}`} target="_blank" rel="noreferrer"><ExternalLink size={13} /> /verifier/{a.id}</a>
                   {!a.revokedAt && <button className="ws-link" onClick={() => void revoke(a.id)}><XCircle size={13} /> Révoquer</button>}
                 </div>
               </li>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import QRCode from "qrcode";
-import { getPublicAttestation } from "@/lib/modules/memoire/attestations";
+import { getPublicAttestation, verificationPath } from "@/lib/modules/memoire/attestations";
 import { LEVEL_LABEL, METHODOLOGY } from "@/lib/modules/memoire/score";
 import "../verifier.css";
 
@@ -29,23 +29,26 @@ const EVIDENCE: Record<string, string> = {
 };
 
 /** Page PUBLIQUE de vérification d'une attestation du Score Co-founder (aucune connexion requise). */
-export default async function VerifierPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function VerifierPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ a?: string | string[] }> }) {
   const { id } = await params;
-  const att = await getPublicAttestation(id);
+  const { a } = await searchParams;
+  const token = Array.isArray(a) ? a[0] : a;
+  const att = await getPublicAttestation(id, token);
   if (!att) {
     return (
       <div className="vf-page">
         <main className="vf">
           <p className="vf-brand">Co-founder · Vérification</p>
-          <div className="vf-status vf-ko"><strong>Attestation introuvable.</strong> Vérifiez le lien ou le QR code.</div>
+          <div className="vf-status vf-ko"><strong>Attestation introuvable.</strong> Vérifiez le lien ou le QR code (le lien complet contient l&apos;attestation signée, paramètre « a »).</div>
         </main>
       </div>
     );
   }
   const h = await headers();
   const base = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"}`;
-  const url = `${base}/verifier/${att.id}`;
-  const qr = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
+  // Le lien et le QR portent l'attestation signée : vérifiable sur n'importe quelle instance.
+  const url = `${base}${verificationPath(att)}`;
+  const qr = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "L" });
   const p = att.payload;
   const v = att.verification;
   return (
@@ -62,8 +65,9 @@ export default async function VerifierPage({ params }: { params: Promise<{ id: s
 
       <div className={`vf-status ${v.valid ? "vf-ok" : "vf-ko"}`}>
         {v.valid ? <strong>✔ Attestation authentique et en cours de validité.</strong> : <strong>✖ Attestation non valide.</strong>}
-        <div>Signature Ed25519 : {v.signatureValid ? "valide" : "invalide"} · Clé : {v.keyKnown ? "publiée par Co-founder" : "inconnue"} · {v.revoked ? "révoquée" : v.expired ? "expirée" : "non révoquée"}</div>
+        <div>Signature Ed25519 : {v.signatureValid ? "valide" : "invalide"} · Clé : {v.keyKnown ? "publiée par Co-founder" : "inconnue"} · {v.revoked ? "révoquée" : v.expired ? "expirée" : att.revocationChecked ? "non révoquée" : "statut de révocation non vérifiable sur cette instance"}</div>
         {v.reasons.map((r) => <div key={r}>{r}</div>)}
+        {!att.revocationChecked && <div>ℹ️ Statut de révocation non vérifiable sur cette instance : l&apos;attestation a été vérifiée depuis le lien signé (contenu et signature intacts).</div>}
       </div>
       {p.demo && <div className="vf-warn">⚠️ Attestation de DÉMONSTRATION : {p.company.isExample ? "entreprise fictive (données de démo)" : ""}{p.company.isExample && att.keySource === "dev" ? " · " : ""}{att.keySource === "dev" ? "signée avec une clé de développement" : ""}. Elle ne prouve rien sur une entreprise réelle.</div>}
 

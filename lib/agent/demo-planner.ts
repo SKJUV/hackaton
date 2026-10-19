@@ -40,6 +40,14 @@ const INTENTS: Intent[] = [
 const INBOX = /\b(boite (de reception|unifiee)|inbox|e-?mails? recus|messages? recus|courriels? recus|non lus?|repondre aux (messages|emails|clients))\b/;
 const EXPLICIT_SEND = /\b(ecris a|ecrire a|envoie a|envoyer a|redige un (e-?mail|mail|courriel) a)\b|@/;
 
+/**
+ * Arbitrage entre intentions de modules qui se recouvrent (mode démo) : quand `when` correspond au message
+ * normalisé, les intentions listées dans `skip` ne sont pas exécutées. Une ligne par règle.
+ */
+export const INTENT_ARBITRATION: { when: RegExp; skip: string[]; why: string }[] = [
+  { when: /data ?room|salle de donnees|dossier investisseurs?\b/, skip: ["fund_financements"], why: "la data room (entreprise) l'emporte sur la recherche de financements" },
+];
+
 export function detectIntents(message: string): string[] {
   // « fournisseur d'accès (internet) » / « fournisseur de services » désignent une activité réglementée, pas un achat.
   const m = norm(message).replace(/fournisseurs? (d.acces|de services?)( a)?( internet)?/g, "activite reglementee");
@@ -249,8 +257,9 @@ export async function runDemoPlanner(company: Company, message: string) {
   }
   // 3. Intentions déclarées par les modules (registre lib/agent/registry.ts).
   const normalized = norm(message);
+  const skipped = new Set(INTENT_ARBITRATION.filter((r) => r.when.test(normalized)).flatMap((r) => r.skip));
   for (const intent of DEMO_INTENTS) {
-    if (!intent.test.test(normalized)) continue;
+    if (skipped.has(intent.name) || !intent.test.test(normalized)) continue;
     try {
       const line = await intent.run({ company, message, call, ctx });
       if (line) lines.push(line);

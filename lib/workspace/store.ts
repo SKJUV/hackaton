@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildSeed } from "./seed";
 import { resetModuleStates } from "@/lib/modules/state";
@@ -16,19 +17,32 @@ function dbPath(): string {
 
 let cache: { path: string; data: WorkspaceData } | null = null;
 let queue: Promise<unknown> = Promise.resolve();
+/** Chargement en cours, partagé : deux lectures simultanées sur une base vierge ne créent qu'un seul seed. */
+let loading: { path: string; promise: Promise<WorkspaceData> } | null = null;
 
-async function load(): Promise<WorkspaceData> {
+function load(): Promise<WorkspaceData> {
   const file = dbPath();
-  if (cache && cache.path === file) return cache.data;
-  let data: WorkspaceData;
-  try {
-    data = migrate(JSON.parse(await readFile(file, "utf8")) as WorkspaceData);
-  } catch {
-    data = buildSeed();
-    await persist(file, data);
-  }
-  cache = { path: file, data };
-  return data;
+  if (cache && cache.path === file) return Promise.resolve(cache.data);
+  if (loading && loading.path === file) return loading.promise;
+  const promise = (async () => {
+    let data: WorkspaceData;
+    let raw: string | null = null;
+    try {
+      raw = await readFile(file, "utf8");
+      data = migrate(JSON.parse(raw) as WorkspaceData);
+    } catch {
+      // Fichier illisible : on le met de côté au lieu de l'écraser silencieusement.
+      if (raw !== null) await rename(file, `${file}.corrompu-${Date.now()}`).catch(() => undefined);
+      data = buildSeed();
+      await persist(file, data);
+    }
+    cache = { path: file, data };
+    return data;
+  })();
+  loading = { path: file, promise };
+  return promise.finally(() => {
+    if (loading?.promise === promise) loading = null;
+  });
 }
 
 /** Migrations non destructives : on conserve les données existantes. */
@@ -46,11 +60,19 @@ function migrate(data: WorkspaceData): WorkspaceData {
   return data;
 }
 
+let writeSeq = 0;
 async function persist(file: string, data: WorkspaceData) {
   await mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  await writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  await rename(tmp, file);
+  // Nom temporaire unique par écriture (pid + compteur + aléa) puis rename atomique :
+  // aucune collision entre écritures concurrentes, même entre instances serverless partageant /tmp.
+  const tmp = `${file}.${process.pid}.${++writeSeq}.${randomUUID().slice(0, 8)}.tmp`;
+  try {
+    await writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
+    await rename(tmp, file);
+  } catch (error) {
+    await unlink(tmp).catch(() => undefined);
+    throw error;
+  }
 }
 
 /** Lecture seule (copie profonde pour éviter les mutations accidentelles). */
@@ -106,6 +128,7 @@ export function resetDemoData(): Promise<void> {
 /** Réservé aux tests. */
 export function __clearCache() {
   cache = null;
+  loading = null;
   queue = Promise.resolve();
 }
 

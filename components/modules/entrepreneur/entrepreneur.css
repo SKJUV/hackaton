@@ -1,0 +1,26 @@
+/* Module Entrepreneur — styles propres (préfixe ent-) */
+.ent-form { display: grid; gap: 8px; }
+.ent-form textarea, .ent-form input, .ent-form select { width: 100%; }
+.ent-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ent-row > * { flex: 1 1 160px; }
+.ent-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ent-verdict { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-glass); display: flex; gap: 12px; align-items: center; }
+.ent-verdict b { font-size: 26px; }
+.ent-verdict.is-fragile { border-color: var(--rose, #e11d48); }
+.ent-verdict.is-a_consolider { border-color: var(--amber, #d97706); }
+.ent-verdict.is-prometteuse_sous_conditions { border-color: var(--green, #16a34a); }
+.ent-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.ent-uncovered { color: var(--amber, #d97706); font-size: 13px; margin: 4px 0; }
+.ent-articles td { vertical-align: top; }
+.ent-crit { display: grid; gap: 4px; font-size: 12px; margin-top: 6px; }
+.ent-crit div { display: flex; gap: 6px; align-items: baseline; }
+.ent-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.ent-mini { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--bg-card); display: grid; gap: 6px; }
+.ent-mini h4 { margin: 0; font-size: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ent-mini p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+.ent-alert { border-left: 3px solid var(--rose, #e11d48); padding: 8px 10px; background: var(--bg-glass); border-radius: 6px; font-size: 13px; }
+.ent-alert.is-attention { border-left-color: var(--amber, #d97706); }
+.ent-bar { height: 6px; border-radius: 4px; background: var(--bg-glass-strong); overflow: hidden; }
+.ent-bar > div { height: 100%; background: var(--accent); }
+.ent-muted { color: var(--text-secondary); font-size: 12px; }
+@media (max-width: 900px) { .ent-two { grid-template-columns: 1fr; } }

@@ -2,6 +2,7 @@ import type { Citation } from "@/lib/legal/citations";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
 import { TOOL_MAP, type ToolContext } from "./tools";
 import { summarizeGrounding } from "./grounding-summary";
+import { memoireIntents, runMemoireIntent } from "@/lib/modules/memoire/demo";
 
 type Basis = { statut: string; libelle: string };
 const basisOf = (data: unknown): Basis | undefined => (data as { fondement_juridique?: Basis } | undefined)?.fondement_juridique;
@@ -36,6 +37,8 @@ const INTENTS: Intent[] = [
 ];
 
 export function detectIntents(message: string): string[] {
+  const memoire = memoireIntents(message);
+  if (memoire) return memoire;
   // « fournisseur d'accès (internet) » / « fournisseur de services » désignent une activité réglementée, pas un achat.
   const m = norm(message).replace(/fournisseurs? (d.acces|de services?)( a)?( internet)?/g, "activite reglementee");
   const found = INTENTS.filter((i) => i.test.test(m)).map((i) => i.name);
@@ -228,6 +231,8 @@ export async function runDemoPlanner(company: Company, message: string) {
       case "juridique":
         // Déjà traité : la recherche juridique est toujours exécutée en premier.
         break;
+      default:
+        await runMemoireIntent(intent, { company, message, call, lines });
     }
   }
   return { answer: lines.join("\n\n"), toolTrace: trace, citations: ctx.citations, grounding: summarizeGrounding(ctx.groundings), mode: "demo" as const };

@@ -22,6 +22,7 @@ import {
   updateChecklistStep,
 } from "@/lib/workspace/service";
 import type { StepStatus } from "@/lib/workspace/types";
+import { MEMOIRE_TOOLS } from "@/lib/modules/memoire/tools";
 
 export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[] };
 export type ToolResult = { summary: string; data: unknown };
@@ -340,6 +341,7 @@ export const TOOLS: AgentTool[] = [
       };
     },
   },
+  ...MEMOIRE_TOOLS,
 ];
 
 export const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));

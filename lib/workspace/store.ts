@@ -75,6 +75,7 @@ export function resetData(): Promise<void> {
   return withData((data) => {
     const fresh = buildSeed();
     Object.assign(data, fresh);
+    data.memoire = undefined;
   });
 }
 
@@ -94,6 +95,7 @@ export function resetDemoData(): Promise<void> {
       (data as Record<string, unknown>)[key] = [...(fresh[key] as { companyId: string }[]), ...keep(data[key] as { companyId: string }[])];
     }
     data.suppliers = fresh.suppliers;
+    if (data.memoire) data.memoire = { decisions: keep(data.memoire.decisions), meetings: keep(data.memoire.meetings), attestations: data.memoire.attestations, seeded: [] };
     const seedUserIds = new Set(fresh.users.map((u) => u.id));
     data.users = [...fresh.users, ...data.users.filter((u) => !seedUserIds.has(u.id))];
     const seedSubIds = new Set(fresh.subscriptions.map((x) => x.id));

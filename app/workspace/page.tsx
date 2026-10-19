@@ -20,6 +20,10 @@ import {
   Truck,
   Users,
   X,
+  Brain,
+  Mic,
+  Award,
+  Feather,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AgentPanel } from "@/components/workspace/AgentPanel";
@@ -41,6 +45,10 @@ import {
 import { api, Badge } from "@/components/workspace/ui";
 import { Paywall } from "@/components/workspace/Paywall";
 import { StudioTab } from "@/components/studio/StudioTab";
+import { MemoireTab } from "@/components/memoire/MemoireTab";
+import { ReunionTab } from "@/components/memoire/ReunionTab";
+import { ScoreTab } from "@/components/memoire/ScoreTab";
+import { BasDebitTab } from "@/components/memoire/BasDebitTab";
 import { getMe, type Me } from "@/components/auth/client";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Snapshot } from "@/lib/workspace/service";
@@ -60,6 +68,10 @@ const TABS = [
   { id: "taches", label: "Tâches", icon: ListTodo },
   { id: "equipe", label: "Équipe", icon: Users },
   { id: "journal", label: "Journal d'audit", icon: Activity },
+  { id: "memoire", label: "Mémoire & décisions", icon: Brain },
+  { id: "reunion", label: "Salle de réunion", icon: Mic },
+  { id: "score", label: "Score Co-founder", icon: Award },
+  { id: "basdebit", label: "Bas débit & vocal", icon: Feather },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -196,6 +208,10 @@ export default function WorkspacePage() {
           {tab === "taches" && <Tasks {...props} />}
           {tab === "equipe" && <Team {...props} />}
           {tab === "journal" && <Journal {...props} />}
+          {tab === "memoire" && <MemoireTab {...props} />}
+          {tab === "reunion" && <ReunionTab {...props} />}
+          {tab === "score" && <ScoreTab {...props} />}
+          {tab === "basdebit" && <BasDebitTab {...props} />}
         </div>
       </main>
 

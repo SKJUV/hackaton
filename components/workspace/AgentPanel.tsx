@@ -18,6 +18,8 @@ const SUGGESTIONS = [
   "Envoie un mail à banque@example.com pour demander un rendez-vous d'ouverture de compte",
   "Quelles sont mes prochaines échéances fiscales ?",
   "Fais une veille réglementaire pour mon secteur",
+  "Pourquoi avons-nous choisi cette structure juridique ?",
+  "Émets une attestation signée de mon score Co-founder",
 ];
 
 const TOOL_LABELS: Record<string, string> = {
@@ -38,6 +40,16 @@ const TOOL_LABELS: Record<string, string> = {
   calendrier_obligations: "Calendrier",
   veille_reglementaire: "Veille réglementaire",
   briefing_cofondateur: "Briefing",
+  memoire_interroger: "Mémoire organisationnelle",
+  registre_decisions: "Registre des décisions",
+  enregistrer_decision: "Enregistrement de décision",
+  reunion_analyser: "Analyse de réunion",
+  reunion_lister: "Réunions",
+  reunion_ce_que_jai_manque: "Ce que j'ai manqué",
+  reunion_generer_pv: "PV de réunion",
+  score_cofounder: "Score Co-founder",
+  score_cofounder_attester: "Attestation signée",
+  resume_vocal: "Résumé vocal",
 };
 
 export function AgentPanel({ snap, onChange, goTo }: { snap: Snapshot; onChange: () => void; goTo: (tab: string) => void }) {

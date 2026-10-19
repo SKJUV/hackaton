@@ -1,10 +1,13 @@
 // Droit.cm Service Worker
-const CACHE_NAME = "droit-cm-v1";
+const CACHE_NAME = "droit-cm-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
   "/icons/icon.svg",
+  "/workspace/memoire/bas-debit",
 ];
+// Pages disponibles hors ligne (mode bas débit) : mises à jour à chaque visite en ligne.
+const OFFLINE_PAGES = ["/workspace/memoire/bas-debit"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -43,9 +46,33 @@ self.addEventListener("fetch", (event) => {
   // Network-first strategy for pages, cache fallback
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match("/") || caches.match(event.request);
-      }),
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200 && OFFLINE_PAGES.includes(url.pathname)) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(url.pathname, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(url.pathname).then((cached) => cached || caches.match("/"))),
+    );
+    return;
+  }
+
+  // Scripts et styles Next.js versionnés (immuables) : cache-first, pour que les pages hors ligne s'hydratent.
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(event.request).then(
+        (cached) =>
+          cached ||
+          fetch(event.request).then((response) => {
+            if (response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return response;
+          }),
+      ),
     );
     return;
   }

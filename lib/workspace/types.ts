@@ -276,4 +276,5 @@ export type WorkspaceData = {
   loginCodes: LoginCode[];
   systemEmails: SystemEmail[];
   subscriptions: Subscription[];
+  memoire?: import("@/lib/modules/memoire/types").MemoireData;
 };

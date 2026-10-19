@@ -25,4 +25,10 @@ export const MODULE_SLOTS: Record<string, ComponentType<TabProps>> = {
   crise: load(() => import("@/components/modules/crise/CrisePanel")),
   citizen: load(() => import("@/components/modules/citizen/CitizenPanel")),
   policy: load(() => import("@/components/modules/policy/PolicyPanel")),
+  data: load(() => import("@/components/modules/entreprise/DataPanel")),
+  finance: load(() => import("@/components/modules/entreprise/FinancePanel")),
+  intel: load(() => import("@/components/modules/entreprise/IntelPanel")),
+  risk: load(() => import("@/components/modules/entreprise/RiskPanel")),
+  "due-diligence": load(() => import("@/components/modules/entreprise/DueDiligencePanel")),
+  "data-room": load(() => import("@/components/modules/entreprise/DataRoomPanel")),
 };

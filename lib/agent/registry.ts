@@ -34,6 +34,7 @@ import { teamModule as team } from "@/lib/modules/entrepreneur/agent";
 import { mentorModule as mentor } from "@/lib/modules/entrepreneur/agent";
 import { marketModule as market } from "@/lib/modules/entrepreneur/agent";
 import { agentModule as etat } from "@/lib/modules/etat/agent";
+import { agentModule as entreprise } from "@/lib/modules/entreprise/agent";
 
 const MODULES: AgentModule[] = [
   { id: "core", tools: CORE_TOOLS },
@@ -47,6 +48,7 @@ const MODULES: AgentModule[] = [
   mentor,
   market,
   etat,
+  entreprise,
 ];
 
 export const AGENT_MODULES = MODULES;

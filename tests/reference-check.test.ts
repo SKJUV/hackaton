@@ -30,6 +30,11 @@ describe("post-contrôle des références de textes", () => {
     expect(r.text).toContain("(⚠️ référence non vérifiée)");
   });
 
+  it("détecte une référence à préfixe d'organisme (« circulaire CNPS‑2024‑01 »)", async () => {
+    const r = await checkReferences("Voir la circulaire CNPS\u20112024\u201101 et la circulaire CNPS / 2023-01.", []);
+    expect(r.unverified).toEqual(["circulaire CNPS\u20112024\u201101", "circulaire CNPS / 2023-01"]);
+  });
+
   it("accepte une référence présente dans un extrait cité", () => {
     const r = checkReferencesWith("L'arrêté n° 0012/MINPOSTEL s'applique.", new Set(), ["… l'arrêté n°0012/MINPOSTEL du 3 mars … "]);
     expect(r.unverified).toEqual([]);

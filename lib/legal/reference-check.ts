@@ -9,7 +9,7 @@ import type { Citation } from "./citations";
  * « référence non vérifiée ». Contrôle côté serveur, indépendant du fournisseur d'IA.
  */
 const REF_RE =
-  /\b(lois?(?:[- ]cadre)?|d[ée]crets?|ordonnances?|arr[êe]t[ée]s?(?: (?:conjoint|minist[ée]riel))?|d[ée]cisions?|circulaires?)(\s+(?:n\s*[°ºo]\.?\s*|no\.?\s+|num[ée]ro\s+)?)([0-9X]{2,4}(?:\s*[/.\-\u2010-\u2015]\s*[0-9A-Z]{1,6}){1,3})/giu;
+  /\b(lois?(?:[- ]cadre)?|d[ée]crets?|ordonnances?|arr[êe]t[ée]s?(?: (?:conjoint|minist[ée]riel))?|d[ée]cisions?|circulaires?)(\s+(?:n\s*[°ºo]\.?\s*|no\.?\s+|num[ée]ro\s+)?)((?:[A-Z]{2,12}\s*[/\-\u2010-\u2015]\s*)?[0-9X]{2,4}(?:\s*[/.\-\u2010-\u2015]\s*[0-9A-Z]{1,6}){1,3})/giu;
 const PAIR_RE = /(\d{2,4})\s*[/_.\-\u2010-\u2015]\s*0*(\d{1,4})/gu;
 const isPlaceholder = (n: string) => /X{2,}|\bX+\b|\/X|X\//i.test(n);
 
@@ -61,7 +61,7 @@ export function checkReferencesWith(answer: string, known: Set<string>, citedTex
       removed.push(full.trim());
       return "[référence non vérifiée retirée]";
     }
-    const key = refKey(num);
+    const key = refKey(num.replace(/^[A-Z]{2,12}\s*[/\-\u2010-\u2015]\s*/u, ""));
     if (!key || keys.has(key)) return full;
     unverified.push(full.trim());
     return `${full} (⚠️ référence non vérifiée)`;

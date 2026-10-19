@@ -51,6 +51,13 @@ export type WorkspaceDocument = {
   updatedAt: string;
   /** Document généré à partir d'un modèle : à faire valider par un professionnel. */
   needsReview?: boolean;
+  /** Ancrage juridique du document (pour l'alerte de changement de loi). */
+  legalQuery?: string;
+  legalSources?: { file: string; page: number; document: string; isExample?: boolean }[];
+  /** Empreinte des fichiers sources du corpus au moment de la génération. */
+  corpusHashes?: Record<string, string>;
+  /** Alerte : un texte source a changé depuis la génération. */
+  lawChange?: { detectedAt: string; files: string[]; status: "a_revoir" | "mis_a_jour" | "ignore"; resolvedAt?: string };
 };
 
 export type TaskStatus = "a_faire" | "en_cours" | "fait";

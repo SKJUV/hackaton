@@ -89,3 +89,8 @@ await proposeExternalMessage(companyId, { module: "fund", type: "fund_relance", 
 ## 8. Avant de pousser `mod/<module>`
 
 `npx tsc --noEmit && npx vitest run && npx next build` dans le worktree, puis `git push fork mod/<module>`. Pas de force-push, pas de merge vers SKJUV. L'équipe intégration fusionne dans `feature/assistant-agentique`.
+
+## Recouvrements d'intentions (mode démo) et sécurité des réponses
+- Quand deux intentions de modules se recouvrent, ajoutez une ligne dans `INTENT_ARBITRATION` (`lib/agent/demo-planner.ts`) : `{ when, skip, why }`. Exemple : la data room l'emporte sur `fund_financements`. `DemoIntent.exclusive` (module mémoire) reste disponible.
+- Les champs optionnels des outils acceptent `null` automatiquement (`nullableOptionals`), et les `null` sont retirés avant exécution (`stripNulls`). N'en dépendez pas pour les champs requis.
+- Toute réponse LLM passe par `checkReferences` (`lib/legal/reference-check.ts`) : un numéro de texte absent du corpus et des extraits cités est retiré ou signalé.

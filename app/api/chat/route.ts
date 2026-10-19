@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   const groqApiKey = process.env.GROQ_API_KEY;
   const providerPreference = process.env.LLM_PROVIDER || "auto";
   const missingKey =
+    providerPreference === "demo" ||
     (providerPreference === "groq" && !groqApiKey) ||
     (providerPreference === "gemini" && !geminiApiKey) ||
     (providerPreference === "auto" && !groqApiKey && !geminiApiKey);

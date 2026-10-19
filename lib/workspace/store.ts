@@ -10,7 +10,11 @@ import type { WorkspaceData } from "./types";
 export const DATA_VERSION = 2;
 
 function dbPath(): string {
-  return process.env.WORKSPACE_DB_PATH || path.join(process.cwd(), "data", "workspace.db.json");
+  if (process.env.WORKSPACE_DB_PATH) return process.env.WORKSPACE_DB_PATH;
+  // Vercel / serverless : système de fichiers en lecture seule sauf /tmp. Le fichier est
+  // (re)créé depuis le seed de démo au premier accès de chaque instance (données éphémères).
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) return path.join("/tmp", "workspace.db.json");
+  return path.join(process.cwd(), "data", "workspace.db.json");
 }
 
 let cache: { path: string; data: WorkspaceData } | null = null;

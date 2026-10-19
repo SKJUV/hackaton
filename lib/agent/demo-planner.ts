@@ -1,6 +1,7 @@
 import type { Citation } from "@/lib/legal/citations";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
-import { TOOL_MAP, type ToolContext } from "./tools";
+import { DEMO_INTENTS, TOOL_MAP } from "./registry";
+import type { ToolContext } from "./tools";
 import { summarizeGrounding } from "./grounding-summary";
 
 type Basis = { statut: string; libelle: string };
@@ -35,10 +36,19 @@ const INTENTS: Intent[] = [
   { name: "juridique", test: /\b(loi|article|licence|autorisation|regime|droit|obligatoire|legal|agrement|homologation|concession|sanction|decret)\b/ },
 ];
 
+const INBOX = /\b(boite (de reception|unifiee)|inbox|e-?mails? recus|messages? recus|courriels? recus|non lus?|repondre aux (messages|emails|clients))\b/;
+const EXPLICIT_SEND = /\b(ecris a|ecrire a|envoie a|envoyer a|redige un (e-?mail|mail|courriel) a)\b|@/;
+
 export function detectIntents(message: string): string[] {
   // « fournisseur d'accès (internet) » / « fournisseur de services » désignent une activité réglementée, pas un achat.
   const m = norm(message).replace(/fournisseurs? (d.acces|de services?)( a)?( internet)?/g, "activite reglementee");
-  const found = INTENTS.filter((i) => i.test.test(m)).map((i) => i.name);
+  let found = INTENTS.filter((i) => i.test.test(m)).map((i) => i.name);
+  // « mes emails reçus », « boîte de réception »… relèvent de la boîte unifiée (module mcp / comms) :
+  // on n'y déclenche pas la rédaction d'email du cœur, sauf demande explicite d'écrire à quelqu'un.
+  if (INBOX.test(m) && !EXPLICIT_SEND.test(m)) {
+    found = found.filter((f) => f !== "email");
+    if (!found.length) return [];
+  }
   if (found.includes("relance")) return ["relance", ...found.filter((f) => f !== "relance" && f !== "devis" && f !== "email")];
   if (found.includes("devis")) return found.filter((f) => f !== "email");
   return found.length ? found : ["juridique"];
@@ -91,7 +101,11 @@ export async function runDemoPlanner(company: Company, message: string) {
   const trace: ToolTrace[] = [];
   const lines: string[] = [];
   const call = async (name: string, input: Record<string, unknown>) => {
-    const tool = TOOL_MAP.get(name)!;
+    const tool = TOOL_MAP.get(name);
+    if (!tool) {
+      trace.push({ tool: name, input, summary: "Outil inconnu", ok: false });
+      return null;
+    }
     try {
       const r = await tool.run(input, ctx);
       trace.push({ tool: name, input, summary: r.summary, ok: true });
@@ -230,5 +244,17 @@ export async function runDemoPlanner(company: Company, message: string) {
         break;
     }
   }
+  // 3. Intentions déclarées par les modules (registre lib/agent/registry.ts).
+  const normalized = norm(message);
+  for (const intent of DEMO_INTENTS) {
+    if (!intent.test.test(normalized)) continue;
+    try {
+      const line = await intent.run({ company, message, call, ctx });
+      if (line) lines.push(line);
+    } catch (error) {
+      lines.push(`⚠️ ${intent.name} : ${error instanceof Error ? error.message : "erreur"}`);
+    }
+  }
+
   return { answer: lines.join("\n\n"), toolTrace: trace, citations: ctx.citations, grounding: summarizeGrounding(ctx.groundings), mode: "demo" as const };
 }

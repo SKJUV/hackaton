@@ -136,6 +136,35 @@ function isPrimarySource(source: string): boolean {
   );
 }
 
+type CorpusStats = {
+  documentFrequency: Map<string, number>;
+  averageLength: number;
+  perChunk: { length: number; frequencies: Map<string, number> }[];
+};
+
+/**
+ * Statistiques BM25 du corpus (fréquences par chunk, fréquence documentaire, longueur moyenne),
+ * calculées une seule fois par tableau de chunks : évite de re-tokeniser tout le corpus à chaque requête.
+ */
+const statsCache = new WeakMap<DocumentChunk[], CorpusStats>();
+function corpusStats(chunks: DocumentChunk[]): CorpusStats {
+  const hit = statsCache.get(chunks);
+  if (hit && hit.perChunk.length === chunks.length) return hit;
+  const documentFrequency = new Map<string, number>();
+  let totalLength = 0;
+  const perChunk = chunks.map((chunk) => {
+    const chunkTerms = terms(chunk.text);
+    totalLength += chunkTerms.length;
+    const frequencies = new Map<string, number>();
+    for (const term of chunkTerms) frequencies.set(term, (frequencies.get(term) ?? 0) + 1);
+    for (const term of frequencies.keys()) documentFrequency.set(term, (documentFrequency.get(term) ?? 0) + 1);
+    return { length: chunkTerms.length, frequencies };
+  });
+  const stats = { documentFrequency, averageLength: chunks.length ? totalLength / chunks.length : 0, perChunk };
+  statsCache.set(chunks, stats);
+  return stats;
+}
+
 export function searchDocuments(
   query: string,
   chunks: DocumentChunk[],
@@ -252,24 +281,11 @@ export function searchDocuments(
   ];
   if (queryTerms.length === 0 || chunks.length === 0) return [];
 
-  const documentFrequency = new Map<string, number>();
-  for (const chunk of chunks) {
-    for (const term of new Set(terms(chunk.text))) {
-      documentFrequency.set(term, (documentFrequency.get(term) ?? 0) + 1);
-    }
-  }
-
-  const averageLength =
-    chunks.reduce((total, chunk) => total + terms(chunk.text).length, 0) /
-    chunks.length;
+  const { documentFrequency, averageLength, perChunk } = corpusStats(chunks);
 
   const results = chunks
-    .map((chunk) => {
-      const chunkTerms = terms(chunk.text);
-      const frequencies = new Map<string, number>();
-      for (const term of chunkTerms) {
-        frequencies.set(term, (frequencies.get(term) ?? 0) + 1);
-      }
+    .map((chunk, index) => {
+      const { length: chunkLength, frequencies } = perChunk[index];
 
       let score = 0;
       for (const term of queryTerms) {
@@ -287,7 +303,7 @@ export function searchDocuments(
           1.2 *
           (1 -
             0.75 +
-            0.75 * (chunkTerms.length / Math.max(averageLength, 1)));
+            0.75 * (chunkLength / Math.max(averageLength, 1)));
         score +=
           inverseDocumentFrequency *
           ((frequency * 2.2) / (frequency + lengthNormalization));

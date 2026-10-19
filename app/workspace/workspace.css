@@ -220,3 +220,21 @@
 .ws-citations-hidden { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
 .ws-citations-hidden summary { cursor: pointer; }
 .ws-citations-compact { list-style: none; padding: 4px 0 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+
+/* Navigation par niveau */
+.ws-nav-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.ws-nav-level { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); padding: 8px 10px 2px; }
+.ws-nav button.is-pending { opacity: .62; }
+.ws-sidebar { overflow-y: auto; }
+@media (max-width: 900px) { .ws-nav-group { flex-direction: row; margin: 0; } .ws-nav-level { display: none; } }
+
+/* Module structure & alerte loi (équipe fondation) */
+.st-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.st-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.st-form label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
+.st-form input, .st-form select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); }
+.st-reco { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+.st-reco ul { margin: 6px 0 6px 18px; }
+.st-scroll { overflow-x: auto; margin-top: 12px; }
+.lw-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }

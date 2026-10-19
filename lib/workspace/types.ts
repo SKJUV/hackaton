@@ -51,6 +51,13 @@ export type WorkspaceDocument = {
   updatedAt: string;
   /** Document généré à partir d'un modèle : à faire valider par un professionnel. */
   needsReview?: boolean;
+  /** Ancrage juridique du document (pour l'alerte de changement de loi). */
+  legalQuery?: string;
+  legalSources?: { file: string; page: number; document: string; isExample?: boolean }[];
+  /** Empreinte des fichiers sources du corpus au moment de la génération. */
+  corpusHashes?: Record<string, string>;
+  /** Alerte : un texte source a changé depuis la génération. */
+  lawChange?: { detectedAt: string; files: string[]; status: "a_revoir" | "mis_a_jour" | "ignore"; resolvedAt?: string };
 };
 
 export type TaskStatus = "a_faire" | "en_cours" | "fait";
@@ -105,9 +112,12 @@ export type QuoteRequest = {
 };
 
 export type EmailStatus = "brouillon" | "en_attente_approbation" | "envoye" | "simule" | "echec" | "rejete";
+/** Canal de l'action externe. Hors email, l'envoi est toujours simulé tant qu'un connecteur réel n'est pas branché. */
+export type MessageChannel = "email" | "whatsapp" | "sms" | (string & {});
 export type Email = {
   id: string;
   companyId: string;
+  channel?: MessageChannel;
   to: string[];
   cc?: string[];
   subject: string;
@@ -116,14 +126,24 @@ export type Email = {
   provider?: string;
   providerMessageId?: string;
   error?: string;
-  relatedType?: "devis" | "relance" | "libre";
+  relatedType?: "devis" | "relance" | "libre" | (string & {});
   relatedId?: string;
   createdBy: string;
   createdAt: string;
   sentAt?: string;
 };
 
-export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur";
+/** Types d'approbation : les modules peuvent en ajouter (chaîne libre, préfixée par le module, ex. "fund_relance"). */
+export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur" | (string & {});
+
+/** Feu vert juridique : vérification de l'action externe contre le corpus officiel, affichée dans la carte d'approbation. */
+export type LegalCheck = {
+  status: "fonde" | "partiel" | "non_couvert";
+  label: string;
+  query: string;
+  sources: { id: string; document: string; page: number; articles: string[]; file: string; isExample: boolean }[];
+  checkedAt: string;
+};
 export type ApprovalStatus = "en_attente" | "approuvee" | "rejetee";
 export type Approval = {
   id: string;
@@ -138,6 +158,10 @@ export type Approval = {
   decidedBy?: string;
   decisionNote?: string;
   decidedAt?: string;
+  /** Module à l'origine de l'action (absent = cœur). */
+  module?: string;
+  /** Feu vert juridique (calculé après création, voir lib/workspace/actions.ts). */
+  legalCheck?: LegalCheck;
   createdAt: string;
 };
 
@@ -276,4 +300,9 @@ export type WorkspaceData = {
   loginCodes: LoginCode[];
   systemEmails: SystemEmail[];
   subscriptions: Subscription[];
+  /** Données des modules (une clé par module, voir lib/modules/state.ts). */
+  modules?: Record<string, ModuleState>;
 };
+
+/** État d'un module : collections libres ; `__seeded` indique si le seed démo a été appliqué. */
+export type ModuleState = { __seeded?: boolean } & Record<string, unknown>;

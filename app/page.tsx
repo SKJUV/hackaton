@@ -37,6 +37,12 @@ import { VoiceInputButton } from "../components/voice/VoiceInputButton";
 
 // Chat Components
 import { MessageActions } from "../components/chat/MessageActions";
+import { ChatHistoryListView } from "../components/chat/ChatHistoryListView";
+
+// Hackathon Feature & Floating Nav Components
+import { FloatingPillNavBar, type NavTab } from "../components/ui/FloatingPillNavBar";
+import { ComplianceDiagnosticView } from "../components/diagnostic/ComplianceDiagnosticView";
+import { UserProfileView } from "../components/profile/UserProfileView";
 
 /* ===== TYPES ===== */
 type Citation = {
@@ -181,9 +187,16 @@ function renderInline(
   citations?: Citation[],
   onOpenCitation?: (citation: Citation) => void,
 ): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|\[S\d+\])/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[S\d+\])/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code key={index} className="inline-code">
+          {part.slice(1, -1)}
+        </code>
+      );
     }
     const citationMatch = part.match(/^\[S(\d+)\]$/);
     if (citationMatch) {
@@ -215,6 +228,26 @@ function renderInline(
   });
 }
 
+function parseTableCells(rowLine: string): string[] {
+  let cleaned = rowLine.trim();
+  if (cleaned.startsWith("|")) cleaned = cleaned.slice(1);
+  if (cleaned.endsWith("|")) cleaned = cleaned.slice(0, -1);
+  return cleaned.split("|").map((cell) => cell.trim());
+}
+
+function isTableSeparator(line: string): boolean {
+  const trimmed = line.trim();
+  return (
+    /^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(trimmed) ||
+    /^\|?(\s*-{2,}\s*\|)+\s*-{2,}\s*\|?$/.test(trimmed)
+  );
+}
+
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.includes("|", 1);
+}
+
 function formatAnswer(
   text: string,
   citations?: Citation[],
@@ -231,36 +264,150 @@ function formatAnswer(
       continue;
     }
 
+    // 1. Headings (#, ##, ###)
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     if (heading) {
-      blocks.push(<h3 key={index}>{renderInline(heading[2], citations, onOpenCitation)}</h3>);
+      blocks.push(
+        <h3 key={`h-${index}`}>
+          {renderInline(heading[2], citations, onOpenCitation)}
+        </h3>
+      );
       index += 1;
       continue;
     }
 
+    // 2. Fenced Code Blocks (``` ... ```)
+    if (line.startsWith("```")) {
+      const startIdx = index;
+      index += 1;
+      const codeLines: string[] = [];
+      while (index < lines.length && !lines[index].trim().startsWith("```")) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length && lines[index].trim().startsWith("```")) {
+        index += 1;
+      }
+      blocks.push(
+        <pre className="chat-code-block" key={`code-${startIdx}`}>
+          <code>{codeLines.join("\n")}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    // 3. Blockquotes (> ...)
+    if (line.startsWith(">")) {
+      const quoteStart = index;
+      const quoteLines: string[] = [];
+      while (index < lines.length && lines[index].trim().startsWith(">")) {
+        quoteLines.push(lines[index].trim().replace(/^>\s?/, ""));
+        index += 1;
+      }
+      blocks.push(
+        <blockquote className="chat-blockquote" key={`quote-${quoteStart}`}>
+          {renderInline(quoteLines.join(" "), citations, onOpenCitation)}
+        </blockquote>
+      );
+      continue;
+    }
+
+    // 4. Markdown Tables (| Col 1 | Col 2 |)
+    if (isTableRow(line)) {
+      const tableStart = index;
+      const tableLines: string[] = [];
+      while (index < lines.length && isTableRow(lines[index])) {
+        tableLines.push(lines[index].trim());
+        index += 1;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerLine = tableLines[0];
+        let bodyLines = tableLines.slice(1);
+        if (bodyLines.length > 0 && isTableSeparator(bodyLines[0])) {
+          bodyLines = bodyLines.slice(1);
+        }
+
+        const headers = parseTableCells(headerLine);
+        blocks.push(
+          <div className="table-responsive-wrapper" key={`table-${tableStart}`}>
+            <table className="chat-markdown-table">
+              <thead>
+                <tr>
+                  {headers.map((h, hIdx) => (
+                    <th key={hIdx}>{renderInline(h, citations, onOpenCitation)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bodyLines.map((bRow, rIdx) => {
+                  if (isTableSeparator(bRow)) return null;
+                  const cells = parseTableCells(bRow);
+                  return (
+                    <tr key={rIdx}>
+                      {cells.map((cell, cIdx) => (
+                        <td key={cIdx}>{renderInline(cell, citations, onOpenCitation)}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // 5. Lists (unordered: -, *, • / ordered: 1., 2.)
     const listItem = line.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
     if (listItem) {
       const ordered = /^\d+[.)]/.test(line);
       const items: ReactNode[] = [];
+      const listStart = index;
       while (index < lines.length) {
         const match = lines[index].trim().match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
         if (!match || /^\d+[.)]/.test(lines[index].trim()) !== ordered) break;
-        items.push(<li key={index}>{renderInline(match[1], citations, onOpenCitation)}</li>);
+        items.push(
+          <li key={`li-${index}`}>
+            {renderInline(match[1], citations, onOpenCitation)}
+          </li>
+        );
         index += 1;
       }
-      blocks.push(ordered ? <ol key={`list-${index}`}>{items}</ol> : <ul key={`list-${index}`}>{items}</ul>);
+      blocks.push(
+        ordered ? (
+          <ol key={`list-${listStart}`}>{items}</ol>
+        ) : (
+          <ul key={`list-${listStart}`}>{items}</ul>
+        )
+      );
       continue;
     }
 
+    // 6. Regular Paragraphs
     const paragraph = [line];
+    const pStart = index;
     index += 1;
     while (index < lines.length && lines[index].trim()) {
       const nextLine = lines[index].trim();
-      if (/^(#{1,3})\s+/.test(nextLine) || /^(?:[-*•]|\d+[.)])\s+/.test(nextLine)) break;
+      if (
+        /^(#{1,3})\s+/.test(nextLine) ||
+        /^(?:[-*•]|\d+[.)])\s+/.test(nextLine) ||
+        isTableRow(nextLine) ||
+        nextLine.startsWith(">") ||
+        nextLine.startsWith("```")
+      ) {
+        break;
+      }
       paragraph.push(nextLine);
       index += 1;
     }
-    blocks.push(<p key={index}>{renderInline(paragraph.join(" "), citations, onOpenCitation)}</p>);
+    blocks.push(
+      <p key={`p-${pStart}`}>
+        {renderInline(paragraph.join(" "), citations, onOpenCitation)}
+      </p>
+    );
   }
 
   return blocks;
@@ -279,6 +426,9 @@ export default function Home() {
   // Chat History Sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  // Floating Nav Tab State
+  const [activeTab, setActiveTab] = useState<NavTab>("home");
 
   // Drawer & Toast State
   const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null);
@@ -497,6 +647,7 @@ export default function Home() {
     setQuestion("");
     setError("");
     setSidebarOpen(false);
+    setActiveTab("home");
     window.setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
@@ -505,6 +656,7 @@ export default function Home() {
     setMessages(session.messages);
     setError("");
     setSidebarOpen(false);
+    setActiveTab("home");
   }
 
   function deleteSession(id: string) {
@@ -568,7 +720,7 @@ export default function Home() {
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`} aria-label="Menu principal et historique">
         <div className="sidebar-top">
           <div className="sidebar-brand-row">
-            <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
+            <a className="brand" href="/" aria-label="Co-founder, accueil">
               <span className="brand-mark">
                 <Scale size={20} strokeWidth={2.1} />
               </span>
@@ -723,8 +875,16 @@ export default function Home() {
             <Menu size={22} strokeWidth={2} />
           </button>
 
-          <a className="topbar-brand" href="/" aria-label="Accueil Droit.cm">
-            <span>droit</span>.cm
+          <a
+            className="topbar-brand"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab("home");
+            }}
+            aria-label="Accueil Co-founder"
+          >
+            Co-<span>founder</span>
             <span className="status-dot" title="Assistant en ligne" />
           </a>
 
@@ -744,8 +904,45 @@ export default function Home() {
           </div>
         </header>
 
-        <div className={`conversation ${messages.length ? "conversation-active" : ""}`}>
-          {messages.length === 0 ? (
+        {/* Tab 2: Diagnostic de conformité & Recherche de lois */}
+        {activeTab === "diagnostic" && (
+          <ComplianceDiagnosticView
+            onAskAboutResult={(prompt) => {
+              setActiveTab("home");
+              void askQuestion(prompt);
+            }}
+          />
+        )}
+
+        {/* Tab 3: Historique des discussions */}
+        {activeTab === "history" && (
+          <ChatHistoryListView
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSelectSession={(s) => {
+              loadSession(s);
+              setActiveTab("home");
+            }}
+            onDeleteSession={deleteSession}
+            onStartNewChat={() => {
+              startNewConversation();
+              setActiveTab("home");
+            }}
+          />
+        )}
+
+        {/* Tab 4: Profil & Espace Juridique */}
+        {activeTab === "profile" && (
+          <UserProfileView
+            onReopenTutorial={reopenTutorial}
+            onGoToDiagnostic={() => setActiveTab("diagnostic")}
+          />
+        )}
+
+        {/* Tab 1: Accueil / Conversation & Chat RAG */}
+        {activeTab === "home" && (
+          <div className={`conversation ${messages.length ? "conversation-active" : ""}`}>
+            {messages.length === 0 ? (
             <div className="welcome">
               <div className="welcome-badge">
                 <Scale size={13} />
@@ -819,7 +1016,7 @@ export default function Home() {
                   )}
                   <div className="message-content">
                     <div className="message-author">
-                      {message.role === "user" ? "Vous" : "Droit.cm"}
+                      {message.role === "user" ? "Vous" : "Co-founder"}
                       {message.role === "assistant" && (
                         <span className="answer-source-label">
                           <Sparkles size={12} /> Réponse documentée
@@ -906,7 +1103,7 @@ export default function Home() {
                   <span className="message-avatar"><Scale size={16} /></span>
                   <div className="message-content">
                     <div className="message-author">
-                      Droit.cm <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
+                      Co-founder <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
                     </div>
                     <div className="typing-indicator"><span /><span /><span /></div>
                   </div>
@@ -923,9 +1120,10 @@ export default function Home() {
             </div>
           )}
         </div>
+      )}
 
-        {/* Bottom Composer when conversation is active */}
-        {messages.length > 0 && (
+        {/* Bottom Composer when conversation is active (Home tab only) */}
+        {activeTab === "home" && messages.length > 0 && (
           <div className="bottom-composer-wrap">
             <form className="composer conversation-composer" onSubmit={handleSubmit}>
               <textarea
@@ -965,6 +1163,15 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Floating Pill Nav Bar (Dock Capsule) */}
+      <FloatingPillNavBar
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          setSidebarOpen(false);
+        }}
+      />
     </main>
   );
 }

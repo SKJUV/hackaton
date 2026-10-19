@@ -41,28 +41,14 @@ import {
 import { api, Badge } from "@/components/workspace/ui";
 import { Paywall } from "@/components/workspace/Paywall";
 import { StudioTab } from "@/components/studio/StudioTab";
+import { LEVELS, NAV } from "@/components/workspace/module-catalog";
+import { MODULE_SLOTS } from "@/components/workspace/module-slots";
+import { ModulePlaceholder } from "@/components/workspace/ModulePlaceholder";
 import { getMe, type Me } from "@/components/auth/client";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Snapshot } from "@/lib/workspace/service";
 
-const TABS = [
-  { id: "tableau", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "agent", label: "Agent co-fondateur", icon: Bot },
-  { id: "studio", label: "Studio co-fondateur", icon: Sparkles },
-  { id: "approbations", label: "Approbations", icon: ShieldCheck },
-  { id: "envoi", label: "Boîte d'envoi", icon: Inbox },
-  { id: "fournisseurs", label: "Fournisseurs & devis", icon: Truck },
-  { id: "demarches", label: "Démarches", icon: ClipboardList },
-  { id: "documents", label: "Documents", icon: FileText },
-  { id: "juridique", label: "Recherche juridique", icon: Gavel },
-  { id: "conformite", label: "Conformité & calendrier", icon: CalendarCheck },
-  { id: "veille", label: "Veille réglementaire", icon: Radar },
-  { id: "taches", label: "Tâches", icon: ListTodo },
-  { id: "equipe", label: "Équipe", icon: Users },
-  { id: "journal", label: "Journal d'audit", icon: Activity },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
+type TabId = string;
 
 export default function WorkspacePage() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -101,6 +87,21 @@ export default function WorkspacePage() {
     if (t) document.documentElement.setAttribute("data-theme", t);
   }, [load]);
 
+  // Onglet dans l'URL (#idea, #fund…) : lien direct vers un module.
+  useEffect(() => {
+    const fromHash = () => {
+      const id = window.location.hash.slice(1);
+      if (id && NAV.some((n) => n.id === id)) setTab(id);
+    };
+    fromHash();
+    window.addEventListener("hashchange", fromHash);
+    return () => window.removeEventListener("hashchange", fromHash);
+  }, []);
+  function selectTab(id: string) {
+    setTab(id);
+    window.history.replaceState(null, "", `#${id}`);
+  }
+
   const refresh = useCallback(() => load(companyId), [load, companyId]);
   const notify = useCallback((text: string, type = "success") => {
     setToast({ text, type });
@@ -127,13 +128,14 @@ export default function WorkspacePage() {
   if (!snap) return <div className="ws-loading">Chargement du workspace…</div>;
 
   const pendingCount = snap.approvals.filter((a) => a.status === "en_attente").length;
-  const props: TabProps = { snap, memberId, refresh, notify, goTo: (t) => setTab(t as TabId) };
-  const current = TABS.find((t) => t.id === tab)!;
+  const props: TabProps = { snap, memberId, refresh, notify, goTo: (t) => selectTab(t) };
+  const current = NAV.find((t) => t.id === tab) ?? NAV[0];
+  const Slot = current.kind === "module" ? MODULE_SLOTS[current.id] : undefined;
 
   return (
     <div className="ws-shell">
       <aside className="ws-sidebar">
-        <a href="/" className="ws-brand"><Scale size={20} /> <span>Droit.cm <em>Co-fondateur IA</em></span></a>
+        <a href="/" className="ws-brand"><Scale size={20} /> <span>Co-founder <em>Workspace</em></span></a>
         <label className="ws-label">Entreprise</label>
         <div className="ws-company-select">
           <Building2 size={15} />
@@ -142,12 +144,17 @@ export default function WorkspacePage() {
           </select>
           <button className="ws-icon-btn" title="Nouvelle entreprise" onClick={() => setShowNew(true)}><Plus size={15} /></button>
         </div>
-        <nav className="ws-nav">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)}>
-              <Icon size={16} /> <span>{label}</span>
-              {id === "approbations" && pendingCount > 0 && <b className="ws-count">{pendingCount}</b>}
-            </button>
+        <nav className="ws-nav" aria-label="Navigation du workspace par niveau">
+          {LEVELS.map((level) => (
+            <div key={level.id} className="ws-nav-group">
+              <div className="ws-nav-level" title={level.hint}>{level.label}</div>
+              {NAV.filter((n) => n.level === level.id).map(({ id, label, icon: Icon, kind }) => (
+                <button key={id} className={`${tab === id ? "is-active" : ""} ${kind === "module" && !MODULE_SLOTS[id] ? "is-pending" : ""}`} onClick={() => selectTab(id)}>
+                  <Icon size={16} /> <span>{label}</span>
+                  {id === "approbations" && pendingCount > 0 && <b className="ws-count">{pendingCount}</b>}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="ws-sidebar-foot">
@@ -183,7 +190,7 @@ export default function WorkspacePage() {
         </header>
         <div className={`ws-content ${tab === "agent" ? "is-agent" : ""}`}>
           {tab === "tableau" && <Dashboard {...props} />}
-          {tab === "agent" && <AgentPanel snap={snap} onChange={() => void refresh()} goTo={(t) => setTab(t as TabId)} />}
+          {tab === "agent" && <AgentPanel snap={snap} onChange={() => void refresh()} goTo={(t) => selectTab(t)} />}
           {tab === "studio" && <StudioTab />}
           {tab === "approbations" && <Approvals {...props} />}
           {tab === "envoi" && <Outbox {...props} />}
@@ -196,6 +203,7 @@ export default function WorkspacePage() {
           {tab === "taches" && <Tasks {...props} />}
           {tab === "equipe" && <Team {...props} />}
           {tab === "journal" && <Journal {...props} />}
+          {current.kind === "module" && (Slot ? <Slot {...props} /> : <ModulePlaceholder entry={current} />)}
         </div>
       </main>
 

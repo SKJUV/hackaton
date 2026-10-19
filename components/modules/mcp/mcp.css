@@ -1,0 +1,17 @@
+/* Module mcp-connecteurs */
+.mcp-catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.mcp-entry { border: 1px solid var(--ws-border, rgba(127,127,127,.25)); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.mcp-entry h4 { margin: 0; font-size: 14px; }
+.mcp-entry p { margin: 0; font-size: 12.5px; opacity: .8; }
+.mcp-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.mcp-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mcp-row input, .mcp-row select, .mcp-form input, .mcp-form select, .mcp-form textarea { min-width: 0; flex: 1; }
+.mcp-form { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.mcp-tools { width: 100%; font-size: 12.5px; border-collapse: collapse; }
+.mcp-tools td { padding: 4px 6px; border-top: 1px solid var(--ws-border, rgba(127,127,127,.18)); vertical-align: top; }
+.mcp-code { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; background: rgba(127,127,127,.1); border-radius: 8px; padding: 8px; margin: 0; }
+.mcp-msg { border-left: 3px solid transparent; }
+.mcp-msg.prio-haute { border-left-color: #e11d48; }
+.mcp-msg.prio-normale { border-left-color: #f59e0b; }
+.mcp-msg.prio-basse { border-left-color: rgba(127,127,127,.4); }
+.mcp-reply { width: 100%; min-height: 140px; }

@@ -1,39 +1,39 @@
 "use client";
 
-import { ArrowRight, BookOpen, Mic, Scale, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, BookOpen, FileText, Mic, Scale, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 const tutorialSteps = [
   {
     stepNumber: "01",
-    badge: "Bienvenue sur Droit.cm 🇨🇲",
+    badge: "Bienvenue sur Co-founder",
     badgeIcon: Scale,
     title: "Le droit camerounais, enfin limpide.",
     description:
       "Plus besoin de déchiffrer des pavés juridiques complexes. Posez vos questions du quotidien en mots simples et comprenez immédiatement vos droits.",
-    illustration: "⚖️",
+    illustration: Scale,
     highlight: "Comprendre ses droits en 1 minute",
     tint: "cyan",
   },
   {
     stepNumber: "02",
-    badge: "Sources officielles 📚",
+    badge: "Sources officielles vérifiées",
     badgeIcon: BookOpen,
     title: "100% appuyé sur les lois et décrets.",
     description:
       "Chaque réponse cite les articles exacts issus de 43 textes légaux (Lois, Décrets, Arrêtés, Régulation ART) avec accès direct aux documents officiels.",
-    illustration: "📜",
+    illustration: FileText,
     highlight: "Articles de loi cités et vérifiables",
     tint: "violet",
   },
   {
     stepNumber: "03",
-    badge: "Texte & Voix 🎙️",
+    badge: "Interaction Texte & Voix",
     badgeIcon: Mic,
     title: "Parlez au micro ou tapez librement.",
     description:
       "Posez vos questions à la voix et écoutez les explications audio d'un simple clic. Tout est pensé pour aller vite, sans barrière.",
-    illustration: "✨",
+    illustration: Mic,
     highlight: "Assistant vocal & écrit instantané",
     tint: "emerald",
   },
@@ -82,7 +82,9 @@ export function MobileFullscreenOnboarding({ onComplete }: { onComplete: () => v
         </div>
 
         <div className="tuto-illustration-wrap">
-          <span className="tuto-big-emoji">{step.illustration}</span>
+          <span className="tuto-big-emoji">
+            <step.illustration size={52} strokeWidth={1.8} />
+          </span>
           <div className={`tuto-ambient-halo ${step.tint}`} />
         </div>
 

@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildSeed } from "./seed";
+import { resetModuleStates } from "@/lib/modules/state";
 import type { WorkspaceData } from "./types";
 
 /**
@@ -98,6 +99,7 @@ export function resetDemoData(): Promise<void> {
     data.users = [...fresh.users, ...data.users.filter((u) => !seedUserIds.has(u.id))];
     const seedSubIds = new Set(fresh.subscriptions.map((x) => x.id));
     data.subscriptions = [...fresh.subscriptions, ...data.subscriptions.filter((x) => !seedSubIds.has(x.id) && !seedUserIds.has(x.userId))];
+    resetModuleStates(data, realIds);
   });
 }
 

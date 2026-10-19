@@ -8,7 +8,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <div className="au-page">
       <header className="au-top">
-        <a href="/" className="au-brand">⚖️ Droit.cm</a>
+        <a href="/" className="au-brand">⚖️ Fama AI</a>
         <nav>
           <a href="/">Assistant juridique (gratuit)</a>
           <a href="/tarifs">Tarifs</a>

@@ -1,4 +1,8 @@
-# Droit.cm — Co-fondateur IA & assistant juridique
+# Fama AI — Co-fondateur IA ancré dans le droit camerounais
+
+> **Fama** (mandingue) : prospérité, renommée, succès. Fama AI est né du projet **Fama AI**
+> (dépôt d'origine [SKJUV/hackaton](https://github.com/SKJUV/hackaton), assistant juridique sur les textes
+> officiels camerounais) et en garde le cœur : chaque conseil part du corpus officiel et le cite.
 
 Assistant pour les startupers camerounais qui **agit** au lieu de seulement répondre :
 il rédige et envoie des emails (après validation), contacte les fournisseurs et suit les devis,

@@ -26,7 +26,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
       className={`splash-overlay ${fadingOut ? "splash-fade-out" : ""}`}
       onClick={handleSkip}
       role="banner"
-      aria-label="Chargement de Droit.cm"
+      aria-label="Chargement de Fama AI"
     >
       <div className="splash-ambient-glow" />
 

@@ -1,4 +1,4 @@
-// Droit.cm Service Worker
+// Fama AI Service Worker
 const CACHE_NAME = "droit-cm-v1";
 const STATIC_ASSETS = [
   "/",

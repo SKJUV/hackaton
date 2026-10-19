@@ -122,7 +122,7 @@ export function UserProfileView({
           <BookOpen size={20} />
           <div>
             <h3>Corpus Réglementaire Officiel du Cameroun</h3>
-            <p>Données officielles intégrées dans le moteur RAG de Droit.cm</p>
+            <p>Données officielles intégrées dans le moteur RAG de Fama AI</p>
           </div>
         </div>
 

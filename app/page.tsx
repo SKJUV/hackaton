@@ -720,7 +720,7 @@ export default function Home() {
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`} aria-label="Menu principal et historique">
         <div className="sidebar-top">
           <div className="sidebar-brand-row">
-            <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
+            <a className="brand" href="/" aria-label="Fama AI, accueil">
               <span className="brand-mark">
                 <Scale size={20} strokeWidth={2.1} />
               </span>
@@ -882,9 +882,9 @@ export default function Home() {
               e.preventDefault();
               setActiveTab("home");
             }}
-            aria-label="Accueil Droit.cm"
+            aria-label="Accueil Fama AI"
           >
-            <span>droit</span>.cm
+            <span>fama</span> AI
             <span className="status-dot" title="Assistant en ligne" />
           </a>
 
@@ -1016,7 +1016,7 @@ export default function Home() {
                   )}
                   <div className="message-content">
                     <div className="message-author">
-                      {message.role === "user" ? "Vous" : "Droit.cm"}
+                      {message.role === "user" ? "Vous" : "Fama AI"}
                       {message.role === "assistant" && (
                         <span className="answer-source-label">
                           <Sparkles size={12} /> Réponse documentée
@@ -1103,7 +1103,7 @@ export default function Home() {
                   <span className="message-avatar"><Scale size={16} /></span>
                   <div className="message-content">
                     <div className="message-author">
-                      Droit.cm <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
+                      Fama AI <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
                     </div>
                     <div className="typing-indicator"><span /><span /><span /></div>
                   </div>

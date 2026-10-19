@@ -75,8 +75,8 @@ export async function requestLoginCode(emailRaw: string, purpose: LoginCode["pur
     data.loginCodes.push({ id: newId("lc"), email, codeHash: sha(`${email}:${code}`), tokenHash: sha(token), purpose, name, expiresAt: new Date(Date.now() + CODE_TTL_MIN * 60000).toISOString(), createdAt: nowIso() });
   });
   const link = `${baseUrl.replace(/\/$/, "")}/api/auth/magic?token=${token}`;
-  const subject = purpose === "reinitialisation" ? "Droit.cm — accès à votre compte (mot de passe oublié)" : "Droit.cm — votre code de connexion";
-  const body = `Bonjour,\n\nVotre code de connexion : ${code}\n\nOu cliquez sur ce lien magique (valable ${CODE_TTL_MIN} minutes) :\n${link}\n\n${purpose === "reinitialisation" ? "Une fois connecté(e), vous pourrez définir un nouveau mot de passe (facultatif) depuis « Mon compte ».\n\n" : ""}Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\nDroit.cm`;
+  const subject = purpose === "reinitialisation" ? "Fama AI — accès à votre compte (mot de passe oublié)" : "Fama AI — votre code de connexion";
+  const body = `Bonjour,\n\nVotre code de connexion : ${code}\n\nOu cliquez sur ce lien magique (valable ${CODE_TTL_MIN} minutes) :\n${link}\n\n${purpose === "reinitialisation" ? "Une fois connecté(e), vous pourrez définir un nouveau mot de passe (facultatif) depuis « Mon compte ».\n\n" : ""}Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.\n\nFama AI`;
   await sendSystemEmail(email, subject, body);
   const simulated = getMailConfig().mode === "simulation";
   return simulated ? { sent: true, simulated, demoCode: code, demoLink: link } : { sent: true, simulated };
@@ -116,7 +116,7 @@ export async function signup(emailRaw: string, name: string, password?: string) 
     if (password) u.passwordHash = hashPassword(password);
     return u;
   });
-  await sendSystemEmail(email, "Bienvenue sur Droit.cm", `Bonjour ${user.name},\n\nVotre compte est prêt. Vous pourrez toujours vous connecter avec un code envoyé par email — le mot de passe est facultatif.\n\nDroit.cm`);
+  await sendSystemEmail(email, "Bienvenue sur Fama AI", `Bonjour ${user.name},\n\nVotre compte est prêt. Vous pourrez toujours vous connecter avec un code envoyé par email — le mot de passe est facultatif.\n\nFama AI`);
   return user;
 }
 

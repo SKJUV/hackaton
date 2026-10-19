@@ -79,7 +79,7 @@ export async function checkout(user: User, planId: string, baseUrl: string, forc
     reference: sub.reference,
     amount: plan.priceXaf,
     currency: "XAF",
-    description: `Droit.cm — ${plan.name} (1 mois)`,
+    description: `Fama AI — ${plan.name} (1 mois)`,
     customerEmail: user.email,
     customerName: user.name,
     returnUrl: `${base}/api/billing/return?ref=${sub.reference}`,

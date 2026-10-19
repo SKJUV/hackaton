@@ -80,7 +80,7 @@ export function PwaInstallPrompt() {
 
     // Desktop Chrome / Edge fallback
     alert(
-      "Pour installer Droit.cm sur votre ordinateur ou mobile :\nCliquez sur l'icône d'installation (⊕) dans la barre d'adresse de votre navigateur ou dans le menu ⋮ > 'Installer l'application'.",
+      "Pour installer Fama AI sur votre ordinateur ou mobile :\nCliquez sur l'icône d'installation (⊕) dans la barre d'adresse de votre navigateur ou dans le menu ⋮ > 'Installer l'application'.",
     );
   }
 

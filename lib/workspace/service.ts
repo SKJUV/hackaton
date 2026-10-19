@@ -13,6 +13,7 @@ import type {
   Task,
   TaskStatus,
   WorkspaceData,
+  WorkspaceDocument,
 } from "./types";
 
 export class WorkspaceError extends Error {
@@ -33,6 +34,7 @@ export function log(data: WorkspaceData, companyId: string, actor: string, actio
 }
 
 import { attachLegalCheck } from "./legal-check";
+import { hashesFor } from "@/lib/legal/fingerprint";
 
 const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
@@ -434,13 +436,19 @@ export async function decideQuote(quoteId: string, decision: "acceptee" | "refus
 
 export async function saveDocument(
   companyId: string,
-  input: { title: string; kind: DocumentKind; content: string; needsReview?: boolean },
+  input: { title: string; kind: DocumentKind; content: string; needsReview?: boolean; legalQuery?: string; legalSources?: WorkspaceDocument["legalSources"] },
   actor = "utilisateur",
 ) {
   if (!input.title?.trim() || !input.content?.trim()) throw new WorkspaceError("Titre et contenu requis.");
+  const official = (input.legalSources ?? []).filter((x) => !x.isExample);
+  const corpusHashes = official.length ? await hashesFor(official.map((x) => x.file)) : undefined;
   return withData((data) => {
     requireCompany(data, companyId);
-    const doc = { id: newId("doc"), companyId, title: input.title.trim(), kind: input.kind, content: input.content, createdBy: actor, createdAt: nowIso(), updatedAt: nowIso(), needsReview: input.needsReview };
+    const doc: WorkspaceDocument = {
+      id: newId("doc"), companyId, title: input.title.trim(), kind: input.kind, content: input.content, createdBy: actor,
+      createdAt: nowIso(), updatedAt: nowIso(), needsReview: input.needsReview,
+      legalQuery: input.legalQuery, legalSources: input.legalSources, corpusHashes,
+    };
     data.documents.push(doc);
     log(data, companyId, actor, "document.creation", `Document « ${doc.title} » enregistré.`);
     return doc;

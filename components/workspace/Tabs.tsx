@@ -6,6 +6,7 @@ import type { Citation } from "@/lib/legal/citations";
 import type { LegalSearch } from "@/lib/legal/corpus";
 import type { Snapshot } from "@/lib/workspace/service";
 import type { WatchAlert } from "@/lib/compliance";
+import { LawChangeCard } from "@/components/modules/law-watch/LawChangeCard";
 import { api, Badge, Card, Empty, ExampleBadge, fmtDate, fmtMoney, Markdown, StatusBadge } from "./ui";
 import { ApprovalAction } from "@/components/modules/mcp/ApprovalAction";
 
@@ -410,7 +411,7 @@ export function Compliance({ snap, refresh, notify }: TabProps) {
 
 /* --------------------------------------------------------------------- Veille */
 
-export function Watch({ snap }: TabProps) {
+export function Watch({ snap, refresh, notify }: TabProps) {
   const [data, setData] = useState<{ keywords: string[]; alerts: WatchAlert[] } | null>(null);
   useEffect(() => {
     setData(null);
@@ -419,6 +420,7 @@ export function Watch({ snap }: TabProps) {
   if (!data) return <Empty>Analyse du corpus…</Empty>;
   return (
     <div className="ws-stack">
+      <LawChangeCard snap={snap} refresh={refresh} notify={notify} />
       <div className="ws-info">Mots-clés surveillés : {data.keywords.map((k) => <Badge key={k} tone="accent">{k}</Badge>)} — tout nouveau texte déposé par l&apos;État dans <code>corpus/officiel/</code> remonte en priorité.</div>
       {data.alerts.length === 0 && <Empty>Aucun texte pertinent trouvé (l&apos;index est-il construit ?).</Empty>}
       {data.alerts.map((a) => (

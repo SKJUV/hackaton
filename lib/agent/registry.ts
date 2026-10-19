@@ -25,12 +25,14 @@ export type DemoIntent = {
 export type AgentModule = { id: string; tools: AgentTool[]; intents?: DemoIntent[] };
 
 import { agentModule as structure } from "@/lib/modules/structure/agent";
+import { agentModule as lawWatch } from "@/lib/modules/law-watch/agent";
 // ↓ imports des modules : une ligne par module
 import { agentModule as connecteurs } from "@/lib/modules/mcp/agent";
 
 const MODULES: AgentModule[] = [
   { id: "core", tools: CORE_TOOLS },
   structure,
+  lawWatch,
   // ↓ modules : une ligne par module, ajoutée en fin de liste
   connecteurs,
 ];

@@ -103,7 +103,7 @@ export function computeRiskProfile(input: {
     score: regScore,
     level: level(regScore),
     drivers: [`Score de conformité : ${compliance.score}/100.`, `${input.overdueObligations} obligation(s) en retard.`, input.regulatedLegal ? `Activité encadrée par le corpus : ${input.regulatedLegal.statusLabel}.` : "Régime sectoriel non évalué."],
-    strategies: [...compliance.recommendations.slice(0, 3), "Suivre la veille réglementaire du secteur (onglet Veille & risques)."],
+    strategies: [...compliance.recommendations.slice(0, 3), "Suivre la veille réglementaire du secteur (onglet Veille & appels d'offres)."],
     basis: "donnees",
     legal: input.regulatedLegal,
   });

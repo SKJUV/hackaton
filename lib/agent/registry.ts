@@ -28,6 +28,7 @@ import { agentModule as structure } from "@/lib/modules/structure/agent";
 import { agentModule as lawWatch } from "@/lib/modules/law-watch/agent";
 // ↓ imports des modules : une ligne par module
 import { agentModule as connecteurs } from "@/lib/modules/mcp/agent";
+import { agentModule as entreprise } from "@/lib/modules/entreprise/agent";
 
 const MODULES: AgentModule[] = [
   { id: "core", tools: CORE_TOOLS },
@@ -35,6 +36,7 @@ const MODULES: AgentModule[] = [
   lawWatch,
   // ↓ modules : une ligne par module, ajoutée en fin de liste
   connecteurs,
+  entreprise,
 ];
 
 export const AGENT_MODULES = MODULES;

@@ -14,7 +14,8 @@ import { dueDiligence } from "@/lib/modules/entreprise/duediligence";
 import { buildDataRoom, dataRoomZip } from "@/lib/modules/entreprise/dataroom";
 import { riskProfile, tenderAlerts, matchKeywords } from "@/lib/modules/entreprise/insights";
 import { fetchWorldBankTenders, fetchWorldBankIndicators, __clearSourceCache, type FetchLike } from "@/lib/modules/entreprise/sources";
-import { TOOL_MAP } from "@/lib/agent/tools";
+import { AGENT_MODULES, TOOL_MAP } from "@/lib/agent/registry";
+import { entrepriseIntentNames } from "@/lib/modules/entreprise/demo";
 import { detectIntents, runDemoPlanner } from "@/lib/agent/demo-planner";
 import { createCompany, getSnapshot } from "@/lib/workspace/service";
 import { readData, resetDemoData } from "@/lib/workspace/store";
@@ -220,33 +221,36 @@ describe("entreprise — services, outils et exports", () => {
   });
 
   it("outils d'agent enregistrés et exécutables ; aucun n'est une action externe", async () => {
-    const names = ["importer_donnees", "tableau_de_bord_donnees", "detecter_anomalies", "rapport_hebdomadaire", "tableau_financier", "exporter_rapport_financier", "veille_sectorielle", "alertes_appels_offres", "profil_risque", "simulation_stress", "due_diligence", "generer_data_room"];
+    const names = ["entreprise_importer_donnees", "entreprise_tableau_de_bord_donnees", "entreprise_detecter_anomalies", "entreprise_rapport_hebdomadaire", "entreprise_tableau_financier", "entreprise_exporter_rapport_financier", "entreprise_veille_sectorielle", "entreprise_alertes_appels_offres", "entreprise_profil_risque", "entreprise_simulation_stress", "entreprise_due_diligence", "entreprise_generer_data_room"];
     for (const n of names) expect(TOOL_MAP.get(n), n).toBeDefined();
     expect(names.some((n) => TOOL_MAP.get(n)!.external)).toBe(false);
     const ctx = { companyId: "co_kmerlog", citations: [], groundings: [] };
-    const fin = await TOOL_MAP.get("tableau_financier")!.run({}, ctx);
+    const fin = await TOOL_MAP.get("entreprise_tableau_financier")!.run({}, ctx);
     expect(fin.summary).toMatch(/EXEMPLE/);
-    const exp = await TOOL_MAP.get("exporter_rapport_financier")!.run({ cible: "fisc" }, ctx);
+    const exp = await TOOL_MAP.get("entreprise_exporter_rapport_financier")!.run({ cible: "fisc" }, ctx);
     expect((exp.data as { telechargements: { pdf: string } }).telechargements.pdf).toContain("/api/entreprise/export");
-    const st = await TOOL_MAP.get("simulation_stress")!.run({ baisse_ventes_pct: 30 }, ctx);
+    const st = await TOOL_MAP.get("entreprise_simulation_stress")!.run({ baisse_ventes_pct: 30 }, ctx);
     expect((st.data as { scenarios: unknown[] }).scenarios).toHaveLength(7);
-    const imp = await TOOL_MAP.get("importer_donnees")!.run({ nom_fichier: "clients.csv", contenu_csv: "Client;Encours;Jours de retard\nA;100000;10" }, ctx);
+    const imp = await TOOL_MAP.get("entreprise_importer_donnees")!.run({ nom_fichier: "clients.csv", contenu_csv: "Client;Encours;Jours de retard\nA;100000;10" }, ctx);
     expect(imp.summary).toMatch(/Clients/);
   });
 
   it("planificateur démo : intentions entreprise, sans demande de devis parasite", async () => {
-    expect(detectIntents("Fais la due diligence du fournisseur Douala Moto Distribution")).toContain("ent_dd");
+    const n = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    expect(entrepriseIntentNames(n("Fais la due diligence du fournisseur Douala Moto Distribution"))).toContain("ent_dd");
     expect(detectIntents("Fais la due diligence du fournisseur Douala Moto Distribution")).not.toContain("devis");
-    expect(detectIntents("Quelle est ma trésorerie prévisionnelle ?")).toContain("ent_finance");
-    expect(detectIntents("Prépare la data room investisseur")).toEqual(["ent_dataroom"]);
-    expect(detectIntents("Exporte le rapport pour la banque")).toContain("ent_export");
+    expect(entrepriseIntentNames(n("Quelle est ma trésorerie prévisionnelle ?"))).toContain("ent_finance");
+    expect(entrepriseIntentNames(n("Prépare la data room investisseur"))).toEqual(["ent_dataroom"]);
+    expect(detectIntents("Prépare la data room investisseur")).toEqual([]);
+    expect(entrepriseIntentNames(n("Exporte le rapport pour la banque"))).toContain("ent_export");
+    expect(AGENT_MODULES.some((m) => m.id === "entreprise")).toBe(true);
     const snap = await getSnapshot("co_kmerlog");
     const r = await runDemoPlanner(snap.company, "Fais la due diligence du fournisseur Douala Moto Distribution");
-    expect(r.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "due_diligence"]);
+    expect(r.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "entreprise_due_diligence"]);
     expect(r.answer).toMatch(/Due diligence/);
     expect((await getSnapshot("co_kmerlog")).approvals).toHaveLength(0);
     const r2 = await runDemoPlanner(snap.company, "Lance une simulation de stress avec une baisse des ventes de 20 %");
-    expect(r2.toolTrace.some((t) => t.tool === "simulation_stress" && t.ok)).toBe(true);
+    expect(r2.toolTrace.some((t) => t.tool === "entreprise_simulation_stress" && t.ok)).toBe(true);
   });
 
   it("réinitialisation de la démo : imports des entreprises de démo purgés, entreprises réelles conservées", async () => {
@@ -255,7 +259,7 @@ describe("entreprise — services, outils et exports", () => {
     await importData(co.id, { fileName: "y.csv", text: "Date;Montant\n2026-09-01;10" });
     await resetDemoData();
     const data = await readData();
-    expect(data.entreprise?.datasets.map((d) => d.companyId)).toEqual([co.id]);
+    expect((data.modules?.entreprise?.datasets as { companyId: string }[]).map((d) => d.companyId)).toEqual([co.id]);
   });
 });
 

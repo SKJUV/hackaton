@@ -5,7 +5,7 @@ import { toCsv } from "./csv";
 import { computeFinance, stressTest, type FinanceView } from "./finance";
 import { citedMarkdown, fiscalObligations } from "./legal";
 import { riskProfile } from "./insights";
-import { getState } from "./service";
+import { getState, storeOf } from "./service";
 import type { Dataset, WeeklyReport } from "./types";
 
 /** Rapport exécutif hebdomadaire et exports financiers (investisseurs, banque, fisc). */
@@ -96,7 +96,7 @@ export async function generateWeeklyReport(companyId: string, opts: { trigger?: 
   const doc = await saveDocument(companyId, { title: r.title, kind: "note", content: r.markdown }, actor);
   const report: WeeklyReport = { id: newId("rap"), companyId, periodStart: r.periodStart, periodEnd: r.periodEnd, title: r.title, markdown: r.markdown, documentId: doc.id, trigger: opts.trigger ?? "manuel", createdAt: nowIso() };
   await withData((data) => {
-    const s = (data.entreprise ??= { datasets: [], budgets: [], settings: [], counterparties: [], reports: [] });
+    const s = storeOf(data);
     (s.reports ??= []).push(report);
     const mine = s.reports.filter((x) => x.companyId === companyId);
     if (mine.length > 52) s.reports = s.reports.filter((x) => x.companyId !== companyId || mine.slice(-52).includes(x));

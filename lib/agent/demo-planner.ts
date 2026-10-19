@@ -1,6 +1,7 @@
 import type { Citation } from "@/lib/legal/citations";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
 import { DEMO_INTENTS, TOOL_MAP } from "./registry";
+import { entrepriseIntentNames, filterCoreIntents } from "@/lib/modules/entreprise/demo";
 import type { ToolContext } from "./tools";
 import { summarizeGrounding } from "./grounding-summary";
 
@@ -49,6 +50,8 @@ export function detectIntents(message: string): string[] {
     found = found.filter((f) => f !== "email");
     if (!found.length) return [];
   }
+  const ent = entrepriseIntentNames(m);
+  if (ent.length && !(found = filterCoreIntents(ent, found)).length) return []; // module entreprise : pas d'action générique non demandée
   if (found.includes("relance")) return ["relance", ...found.filter((f) => f !== "relance" && f !== "devis" && f !== "email")];
   if (found.includes("devis")) return found.filter((f) => f !== "email");
   return found.length ? found : ["juridique"];

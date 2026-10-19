@@ -16,4 +16,10 @@ export const MODULE_SLOTS: Record<string, ComponentType<TabProps>> = {
   // ↓ modules : une ligne par module, ajoutée en fin de liste
   connecteurs: load(() => import("@/components/modules/mcp/ConnectorsPanel")),
   comms: load(() => import("@/components/modules/mcp/CommsPanel")),
+  data: load(() => import("@/components/modules/entreprise/DataPanel")),
+  finance: load(() => import("@/components/modules/entreprise/FinancePanel")),
+  intel: load(() => import("@/components/modules/entreprise/IntelPanel")),
+  risk: load(() => import("@/components/modules/entreprise/RiskPanel")),
+  "due-diligence": load(() => import("@/components/modules/entreprise/DueDiligencePanel")),
+  "data-room": load(() => import("@/components/modules/entreprise/DataRoomPanel")),
 };

@@ -1,5 +1,6 @@
 import { log, WorkspaceError } from "@/lib/workspace/service";
 import { newId, nowIso, readData, withData } from "@/lib/workspace/store";
+import { moduleState } from "@/lib/modules/state";
 import type { Company, WorkspaceData } from "@/lib/workspace/types";
 import { buildDashboards, detectAnomalies } from "./analytics";
 import { parseCsv } from "./csv";
@@ -23,8 +24,9 @@ export function emptyStore(): EntrepriseStore {
   return { datasets: [], budgets: [], settings: [], counterparties: [], reports: [] };
 }
 
-function storeOf(data: WorkspaceData): EntrepriseStore {
-  const s = (data.entreprise ??= emptyStore());
+/** État persistant du module (convention moduleState : data.modules.entreprise, chaque élément porte companyId). */
+export function storeOf(data: WorkspaceData): EntrepriseStore {
+  const s = moduleState(data, "entreprise", emptyStore) as unknown as EntrepriseStore;
   for (const k of Object.keys(emptyStore()) as (keyof EntrepriseStore)[]) (s[k] as unknown[]) ??= [];
   return s;
 }
@@ -45,7 +47,7 @@ export function defaultSettings(company: Company, now = new Date()): FinanceSett
 export function stateFrom(data: WorkspaceData, companyId: string, now = new Date()): CompanyState {
   const company = data.companies.find((c) => c.id === companyId);
   if (!company) throw new WorkspaceError("Entreprise introuvable.", 404);
-  const s = data.entreprise ?? emptyStore();
+  const s = (data.modules?.entreprise ?? emptyStore()) as unknown as Partial<EntrepriseStore>;
   const mine = <T extends { companyId: string }>(list: T[] | undefined) => (list ?? []).filter((x) => x.companyId === companyId);
   const stored = { datasets: mine(s.datasets), budgets: mine(s.budgets), settings: mine(s.settings)[0], counterparties: mine(s.counterparties), reports: mine(s.reports) };
   const demo = Boolean(company.isExample);
@@ -208,5 +210,4 @@ export async function financeOverview(companyId: string, now = new Date()) {
   return computeFinance(st.datasets, st.budgets, st.settings, now);
 }
 
-export { pruneEntreprise } from "./prune";
 export { nowIso };

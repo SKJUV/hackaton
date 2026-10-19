@@ -44,7 +44,7 @@ const EXAMPLE_NOTE = "Les données marquées exemple sont FICTIVES : le dire exp
 
 export const ENTREPRISE_TOOLS: AgentTool[] = [
   {
-    name: "importer_donnees",
+    name: "entreprise_importer_donnees",
     description: "Importe un fichier CSV (contenu texte collé) de ventes, finances, RH ou clients dans le workspace, reconnaît les colonnes et le structure. Les fichiers Excel (.xlsx) s'importent depuis l'onglet Entreprise › Données.",
     parameters: {
       type: "object",
@@ -61,7 +61,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "tableau_de_bord_donnees",
+    name: "entreprise_tableau_de_bord_donnees",
     description: "Tableaux de bord automatiques sur les données importées (ventes, finances, RH, clients) : indicateurs clés, évolutions mensuelles, répartitions.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -73,7 +73,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "detecter_anomalies",
+    name: "entreprise_detecter_anomalies",
     description: "Détecte les anomalies dans les données importées : pics/chutes mensuels, montants aberrants, doublons, ventes négatives, retards de paiement, concentration client, salaires atypiques.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -82,7 +82,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "rapport_hebdomadaire",
+    name: "entreprise_rapport_hebdomadaire",
     description: "Génère le rapport exécutif hebdomadaire (synthèse, indicateurs, trésorerie, anomalies, risques, échéances, recommandations) et l'enregistre dans Documents.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -91,7 +91,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "tableau_financier",
+    name: "entreprise_tableau_financier",
     description: "Tableau de bord financier : revenus, dépenses, budget vs réalisé, trésorerie actuelle et prévisionnelle (6 mois), autonomie, alertes de risque de trésorerie.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -103,7 +103,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "exporter_rapport_financier",
+    name: "entreprise_exporter_rapport_financier",
     description: "Prépare un rapport financier pour les investisseurs, la banque ou l'administration fiscale, l'enregistre dans Documents et fournit les liens de téléchargement (PDF, Markdown, CSV). Les obligations fiscales sont citées depuis le corpus officiel, sinon marquées exemple.",
     parameters: { type: "object", properties: { cible: { type: "string", enum: ["investisseurs", "banque", "fisc"] } }, required: ["cible"] },
     async run(input, ctx) {
@@ -116,7 +116,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "veille_sectorielle",
+    name: "entreprise_veille_sectorielle",
     description: "Veille sectorielle filtrée par le profil de l'entreprise : textes officiels pertinents (veille réglementaire du corpus), publications du régulateur, signaux de marché (exemple) et indicateurs macroéconomiques réels (Banque mondiale).",
     parameters: { type: "object", properties: { mots_cles: { type: "array", items: { type: "string" } } } },
     async run(input, ctx) {
@@ -128,7 +128,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "alertes_appels_offres",
+    name: "entreprise_alertes_appels_offres",
     description: "Alertes sur les appels d'offres publics correspondant au profil : avis réels de la Banque mondiale pour le Cameroun (API publique), archives d'avis de l'ART présentes dans le corpus, exemples marqués, et portails officiels nationaux (ARMP, COLEPS).",
     parameters: { type: "object", properties: { mots_cles: { type: "array", items: { type: "string" } } } },
     async run(input, ctx) {
@@ -140,7 +140,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "profil_risque",
+    name: "entreprise_profil_risque",
     description: "Profil de risque de l'entreprise (change, crédit client, opérationnel, réglementaire, liquidité) avec scores, facteurs, stratégies de couverture et alertes. Le risque réglementaire cite le corpus officiel.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -150,7 +150,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "simulation_stress",
+    name: "entreprise_simulation_stress",
     description: "Simule des scénarios de stress sur la trésorerie (baisse des ventes, hausse des coûts, choc de change, retards de paiement, perte du premier client) + un scénario personnalisé.",
     parameters: {
       type: "object",
@@ -171,7 +171,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "due_diligence",
+    name: "entreprise_due_diligence",
     description: "Due diligence d'un partenaire, fournisseur, client ou investisseur : fiche de signaux à partir des données disponibles (historique commercial, encours, devis, notes) et checklist juridique citée depuis le corpus officiel. Enregistre la fiche dans Documents.",
     parameters: { type: "object", properties: { nom: { type: "string" }, type: { type: "string", enum: ["partenaire", "fournisseur", "client", "investisseur"] } }, required: ["nom"] },
     async run(input, ctx) {
@@ -182,7 +182,7 @@ export const ENTREPRISE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "generer_data_room",
+    name: "entreprise_generer_data_room",
     description: "Génère la data room investisseur (statuts, pacte, conformité, chiffres, business plan, risques, score de préparation), enregistre l'index dans Documents et fournit les liens d'export ZIP et PDF. Les pièces manquantes sont signalées.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {

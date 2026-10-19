@@ -38,7 +38,7 @@ export async function sectorWatch(companyId: string, opts: { keywords?: string[]
   const publications = all.filter((a) => a.source.startsWith("publications/") && !/appel d.offre/i.test(a.source)).slice(0, 6);
   const signals = MARKET_SIGNALS_EXAMPLE.map((s) => ({ ...s, matched: matchKeywords(s.tags.join(" "), keywords), isExample: true }))
     .filter((s) => s.matched.length)
-    .map((s) => ({ ...s, action: s.kind === "concurrence" ? "Mettre à jour l'analyse concurrentielle et l'argumentaire prix." : s.kind === "matieres_premieres" ? "Simuler l'impact sur les coûts (onglet stress) et renégocier les contrats." : s.kind === "disruption" ? "Évaluer l'opportunité/menace en comité de direction." : "Adapter l'offre et la communication." }));
+    .map((s) => ({ ...s, action: s.kind === "concurrence" ? "Mettre à jour l'analyse concurrentielle et l'argumentaire prix." : s.kind === "matieres_premieres" ? "Simuler l'impact sur les coûts (onglet Risques, simulation de stress) et renégocier les contrats." : s.kind === "disruption" ? "Évaluer l'opportunité/menace en comité de direction." : "Adapter l'offre et la communication." }));
   const macro = await fetchWorldBankIndicators(st.company.country === "Cameroun" ? "CM" : "CM", opts.fetchImpl);
   return {
     profile: { sector: st.company.sector, keywords },

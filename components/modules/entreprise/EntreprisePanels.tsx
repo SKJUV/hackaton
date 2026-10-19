@@ -1,9 +1,9 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Briefcase, Database, Download, FileSpreadsheet, FolderArchive, Landmark, Radar, RefreshCw, Search, ShieldAlert, Upload, Wallet } from "lucide-react";
+import { AlertTriangle, BarChart3, Briefcase, Download, FileSpreadsheet, Landmark, RefreshCw, ShieldAlert, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, Badge, Card, Empty, ExampleBadge, Markdown } from "@/components/workspace/ui";
-import type { Snapshot } from "@/lib/workspace/service";
+import type { TabProps } from "@/components/workspace/Tabs";
 import "./entreprise.css";
 
 /* Types renvoyés par /api/entreprise (formes simplifiées côté client). */
@@ -15,35 +15,29 @@ type DataView = { datasets: DatasetSummary[]; dashboards: Dash[]; anomalies: Ano
 type Row = { period: string; revenue: number; expenses: number; net: number; balance: number };
 type FinanceView = { currency: string; isExample: boolean; hasData: boolean; basis: string; settings: { openingCash: number; openingDate: string; safetyCash: number; fxShare: number; isExample: boolean }; currentCash: number; history: Row[]; forecast: Row[]; budget: { category: string; budget: number; actual: number; average: number; variancePct: number | null; status: string }[]; budgetLines: { category: string; monthly: number }[]; totals: { revenue12: number; expenses12: number; burnMonthly: number; runwayMonths: number | null; growthPct: number | null }; hypotheses: string[]; alerts: { severity: string; title: string; detail: string }[] };
 
-const SUBTABS = [
-  { id: "donnees", label: "Données", icon: Database },
-  { id: "finance", label: "Tableau financier", icon: Wallet },
-  { id: "veille", label: "Veille & risques", icon: Radar },
-  { id: "dd", label: "Due diligence", icon: Search },
-  { id: "dataroom", label: "Data room", icon: FolderArchive },
-] as const;
-type Sub = (typeof SUBTABS)[number]["id"];
 
 const nf = (n: number) => new Intl.NumberFormat("fr-FR").format(Math.round(n));
 const DOMAIN: Record<string, string> = { ventes: "Ventes", finances: "Finances", rh: "RH", clients: "Clients" };
 const SEV: Record<string, { tone: "rose" | "amber" | "neutral" | "green"; label: string }> = { critique: { tone: "rose", label: "Critique" }, attention: { tone: "amber", label: "Attention" }, info: { tone: "neutral", label: "Info" }, positif: { tone: "green", label: "Positif" } };
 
-type HubProps = { snap: Snapshot; notify: (text: string, type?: string) => void; refresh: () => void | Promise<void> };
+type HubProps = Pick<TabProps, "snap" | "notify" | "refresh">;
 
-export function EntrepriseHub(props: HubProps) {
-  const [sub, setSub] = useState<Sub>("donnees");
+/**
+ * Module « Entreprise » (niveau 2) : une section par onglet réservé dans module-catalog
+ * (data, finance, intel, risk, due-diligence, data-room). Chaque fichier *Panel.tsx de ce dossier
+ * exporte par défaut la section correspondante.
+ */
+export type EntrepriseSectionId = "data" | "finance" | "intel" | "risk" | "due-diligence" | "data-room";
+
+export function EntrepriseSection({ section, ...props }: HubProps & { section: EntrepriseSectionId }) {
   return (
     <div className="ws-stack">
-      <div className="ent-subnav">
-        {SUBTABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} className={sub === id ? "is-active" : ""} onClick={() => setSub(id)}><Icon size={14} /> {label}</button>
-        ))}
-      </div>
-      {sub === "donnees" && <DataPanel {...props} />}
-      {sub === "finance" && <FinancePanel {...props} />}
-      {sub === "veille" && <VeillePanel {...props} />}
-      {sub === "dd" && <DueDiligencePanel {...props} />}
-      {sub === "dataroom" && <DataRoomPanel {...props} />}
+      {section === "data" && <DataPanel {...props} />}
+      {section === "finance" && <FinancePanel {...props} />}
+      {section === "intel" && <IntelPanel {...props} />}
+      {section === "risk" && <RiskPanel {...props} />}
+      {section === "due-diligence" && <DueDiligencePanel {...props} />}
+      {section === "data-room" && <DataRoomPanel {...props} />}
     </div>
   );
 }
@@ -372,23 +366,13 @@ type Stress = { base: { currentCash: number; runwayMonths: number | null; isExam
 
 const docLink = (source: string) => `/api/document?file=${encodeURIComponent(source)}`;
 
-function VeillePanel({ snap }: HubProps) {
+function IntelPanel({ snap }: HubProps) {
   const companyId = snap.company.id;
   const [keywords, setKeywords] = useState("");
   const [applied, setApplied] = useState("");
   const extra = applied ? `&keywords=${encodeURIComponent(applied)}` : "";
   const watch = useView<Watch>(companyId, "veille", extra);
   const tenders = useView<Tenders>(companyId, "appels", extra);
-  const risk = useView<Risk>(companyId, "risques");
-  const stress = useView<Stress>(companyId, "stress");
-  const [custom, setCustom] = useState({ revenue: "20", costs: "0", fx: "0", delay: "0", lose: false });
-  const [customRes, setCustomRes] = useState<Stress | null>(null);
-
-  async function runCustom() {
-    const r = await post<Stress>(companyId, "stress", { label: "Scénario personnalisé", revenueShock: -Math.abs(Number(custom.revenue)) / 100, expenseShock: Number(custom.costs) / 100, fxShock: Number(custom.fx) / 100, paymentDelayDays: Number(custom.delay), loseTopClient: custom.lose });
-    setCustomRes(r);
-  }
-  const results = customRes?.results ?? stress.data?.results ?? [];
   return (
     <div className="ws-stack">
       <Card title="Profil de veille">
@@ -399,6 +383,59 @@ function VeillePanel({ snap }: HubProps) {
         </div>
       </Card>
 
+      <Card title="Alertes d'appels d'offres publics">
+        {!tenders.data ? <p className="ws-muted">{tenders.error || "Interrogation des sources…"}</p> : (
+          <>
+            <h4>Source réelle : {tenders.data.live.status.name} {tenders.data.live.status.live ? <Badge tone="green">en direct</Badge> : <Badge tone="amber">indisponible{tenders.data.live.status.error ? ` — ${tenders.data.live.status.error}` : ""}</Badge>}</h4>
+            {tenders.data.live.matching.length ? tenders.data.live.matching.map((t) => <SevItem key={t.id} severity="attention" title={<a href={t.url} target="_blank" rel="noreferrer">{t.title}</a>} detail={`${t.buyer} · ${t.noticeType} · échéance ${t.deadline ?? "non précisée"} · mots : ${t.matched.join(", ")}`} />) : <Empty>Aucun avis ouvert ne correspond au profil pour l&apos;instant.</Empty>}
+            {tenders.data.live.others.length > 0 && <details><summary className="ws-link">Autres avis ouverts au Cameroun ({tenders.data.live.others.length})</summary>{tenders.data.live.others.map((t) => <div key={t.id} className="ws-row"><a href={t.url} target="_blank" rel="noreferrer">{t.title}</a> <span className="ent-src">· {t.deadline ?? "—"}</span></div>)}</details>}
+            <h4>{tenders.data.archive.label}</h4>
+            {tenders.data.archive.items.slice(0, 5).map((a) => <div key={a.source} className="ws-row"><a href={docLink(a.source)} target="_blank" rel="noreferrer">{a.title}</a> {a.matched.length > 0 && <Badge tone="accent">{a.matched.join(", ")}</Badge>}</div>)}
+            <h4>Exemples (fictifs) correspondant au profil</h4>
+            {tenders.data.examples.length ? tenders.data.examples.map((t) => <div key={t.id} className="ws-row"><ExampleBadge /> {t.title} <span className="ent-src">· {t.buyer} · {t.deadline} · {nf(t.amount)} XAF</span></div>) : <Empty>Aucun exemple pour ce profil.</Empty>}
+            <h4>Portails officiels nationaux</h4>
+            {tenders.data.portals.map((p) => <div key={p.url} className="ws-row"><a href={p.url} target="_blank" rel="noreferrer">{p.name}</a> <span className="ent-src">— {p.note}</span></div>)}
+          </>
+        )}
+      </Card>
+
+      <Card title="Veille sectorielle filtrée">
+        {!watch.data ? <p className="ws-muted">{watch.error || "Chargement…"}</p> : (
+          <>
+            <h4>Textes officiels pertinents (veille réglementaire)</h4>
+            {watch.data.regulatory.length ? watch.data.regulatory.map((a) => <SevItem key={a.source} severity={a.isNewOfficial ? "attention" : "info"} title={<a href={docLink(a.source)} target="_blank" rel="noreferrer">{a.title}</a>} detail={`${a.action} · mots : ${a.matched.join(", ")}`} />) : <Empty>Aucun texte (index du corpus absent ? npm run index-documents).</Empty>}
+            <h4>Publications du régulateur</h4>
+            {watch.data.publications.map((p) => <div key={p.source} className="ws-row"><a href={docLink(p.source)} target="_blank" rel="noreferrer">{p.title}</a> <span className="ent-src">· {p.matched.join(", ")}</span></div>)}
+            <h4>Signaux de marché</h4>
+            {watch.data.signals.length ? watch.data.signals.map((s) => <div key={s.id} className="ent-item"><ExampleBadge /> <strong>{s.title}</strong><p>{s.impact} → {s.action}</p></div>) : <Empty>Aucun signal pour ce profil.</Empty>}
+            <h4>Indicateurs macroéconomiques {watch.data.macro.status.live ? <Badge tone="green">Banque mondiale — réel</Badge> : <Badge tone="amber">indisponible</Badge>}</h4>
+            {watch.data.macro.items.map((m) => <div key={m.id} className="ws-row">{m.label} : <strong>{m.value}</strong> ({m.year}) <a className="ent-src" href={m.url} target="_blank" rel="noreferrer">source</a></div>)}
+            <ul className="ent-src">{watch.data.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function RiskPanel({ snap, notify }: HubProps) {
+  const companyId = snap.company.id;
+  const risk = useView<Risk>(companyId, "risques");
+  const stress = useView<Stress>(companyId, "stress");
+  const [custom, setCustom] = useState({ revenue: "20", costs: "0", fx: "0", delay: "0", lose: false });
+  const [customRes, setCustomRes] = useState<Stress | null>(null);
+
+  async function runCustom() {
+    try {
+      const r = await post<Stress>(companyId, "stress", { label: "Scénario personnalisé", revenueShock: -Math.abs(Number(custom.revenue)) / 100, expenseShock: Number(custom.costs) / 100, fxShock: Number(custom.fx) / 100, paymentDelayDays: Number(custom.delay), loseTopClient: custom.lose });
+      setCustomRes(r);
+    } catch (e) {
+      notify(e instanceof Error ? e.message : "Erreur", "error");
+    }
+  }
+  const results = customRes?.results ?? stress.data?.results ?? [];
+  return (
+    <div className="ws-stack">
       {risk.data ? (
         <Card title={<><ShieldAlert size={15} /> Profil de risque — {risk.data.overall}/100 ({risk.data.level})</>} actions={risk.data.isExample ? <ExampleBadge /> : null}>
           {risk.data.alerts.map((a) => <SevItem key={a.title} severity={a.severity} title={a.title} detail={a.detail} />)}
@@ -433,37 +470,6 @@ function VeillePanel({ snap }: HubProps) {
         ) : <Loading error={stress.error} />}
       </Card>
 
-      <Card title="Alertes d'appels d'offres publics">
-        {!tenders.data ? <p className="ws-muted">{tenders.error || "Interrogation des sources…"}</p> : (
-          <>
-            <h4>Source réelle : {tenders.data.live.status.name} {tenders.data.live.status.live ? <Badge tone="green">en direct</Badge> : <Badge tone="amber">indisponible{tenders.data.live.status.error ? ` — ${tenders.data.live.status.error}` : ""}</Badge>}</h4>
-            {tenders.data.live.matching.length ? tenders.data.live.matching.map((t) => <SevItem key={t.id} severity="attention" title={<a href={t.url} target="_blank" rel="noreferrer">{t.title}</a>} detail={`${t.buyer} · ${t.noticeType} · échéance ${t.deadline ?? "non précisée"} · mots : ${t.matched.join(", ")}`} />) : <Empty>Aucun avis ouvert ne correspond au profil pour l&apos;instant.</Empty>}
-            {tenders.data.live.others.length > 0 && <details><summary className="ws-link">Autres avis ouverts au Cameroun ({tenders.data.live.others.length})</summary>{tenders.data.live.others.map((t) => <div key={t.id} className="ws-row"><a href={t.url} target="_blank" rel="noreferrer">{t.title}</a> <span className="ent-src">· {t.deadline ?? "—"}</span></div>)}</details>}
-            <h4>{tenders.data.archive.label}</h4>
-            {tenders.data.archive.items.slice(0, 5).map((a) => <div key={a.source} className="ws-row"><a href={docLink(a.source)} target="_blank" rel="noreferrer">{a.title}</a> {a.matched.length > 0 && <Badge tone="accent">{a.matched.join(", ")}</Badge>}</div>)}
-            <h4>Exemples (fictifs) correspondant au profil</h4>
-            {tenders.data.examples.length ? tenders.data.examples.map((t) => <div key={t.id} className="ws-row"><ExampleBadge /> {t.title} <span className="ent-src">· {t.buyer} · {t.deadline} · {nf(t.amount)} XAF</span></div>) : <Empty>Aucun exemple pour ce profil.</Empty>}
-            <h4>Portails officiels nationaux</h4>
-            {tenders.data.portals.map((p) => <div key={p.url} className="ws-row"><a href={p.url} target="_blank" rel="noreferrer">{p.name}</a> <span className="ent-src">— {p.note}</span></div>)}
-          </>
-        )}
-      </Card>
-
-      <Card title="Veille sectorielle filtrée">
-        {!watch.data ? <p className="ws-muted">{watch.error || "Chargement…"}</p> : (
-          <>
-            <h4>Textes officiels pertinents (veille réglementaire)</h4>
-            {watch.data.regulatory.length ? watch.data.regulatory.map((a) => <SevItem key={a.source} severity={a.isNewOfficial ? "attention" : "info"} title={<a href={docLink(a.source)} target="_blank" rel="noreferrer">{a.title}</a>} detail={`${a.action} · mots : ${a.matched.join(", ")}`} />) : <Empty>Aucun texte (index du corpus absent ? npm run index-documents).</Empty>}
-            <h4>Publications du régulateur</h4>
-            {watch.data.publications.map((p) => <div key={p.source} className="ws-row"><a href={docLink(p.source)} target="_blank" rel="noreferrer">{p.title}</a> <span className="ent-src">· {p.matched.join(", ")}</span></div>)}
-            <h4>Signaux de marché</h4>
-            {watch.data.signals.length ? watch.data.signals.map((s) => <div key={s.id} className="ent-item"><ExampleBadge /> <strong>{s.title}</strong><p>{s.impact} → {s.action}</p></div>) : <Empty>Aucun signal pour ce profil.</Empty>}
-            <h4>Indicateurs macroéconomiques {watch.data.macro.status.live ? <Badge tone="green">Banque mondiale — réel</Badge> : <Badge tone="amber">indisponible</Badge>}</h4>
-            {watch.data.macro.items.map((m) => <div key={m.id} className="ws-row">{m.label} : <strong>{m.value}</strong> ({m.year}) <a className="ent-src" href={m.url} target="_blank" rel="noreferrer">source</a></div>)}
-            <ul className="ent-src">{watch.data.notes.map((n) => <li key={n}>{n}</li>)}</ul>
-          </>
-        )}
-      </Card>
     </div>
   );
 }

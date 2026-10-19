@@ -9,8 +9,8 @@ import type { Citation } from "./citations";
  * « référence non vérifiée ». Contrôle côté serveur, indépendant du fournisseur d'IA.
  */
 const REF_RE =
-  /\b(lois?(?:[- ]cadre)?|d[ée]crets?|ordonnances?|arr[êe]t[ée]s?(?: (?:conjoint|minist[ée]riel))?|d[ée]cisions?|circulaires?)(\s+(?:n\s*[°ºo]\.?\s*|no\.?\s+|num[ée]ro\s+)?)([0-9X]{2,4}(?:\s*[/.\-–]\s*[0-9A-Z]{1,6}){1,3})/giu;
-const PAIR_RE = /(\d{2,4})\s*[/_.\-–]\s*0*(\d{1,4})/g;
+  /\b(lois?(?:[- ]cadre)?|d[ée]crets?|ordonnances?|arr[êe]t[ée]s?(?: (?:conjoint|minist[ée]riel))?|d[ée]cisions?|circulaires?)(\s+(?:n\s*[°ºo]\.?\s*|no\.?\s+|num[ée]ro\s+)?)([0-9X]{2,4}(?:\s*[/.\-\u2010-\u2015]\s*[0-9A-Z]{1,6}){1,3})/giu;
+const PAIR_RE = /(\d{2,4})\s*[/_.\-\u2010-\u2015]\s*0*(\d{1,4})/gu;
 const isPlaceholder = (n: string) => /X{2,}|\bX+\b|\/X|X\//i.test(n);
 
 function pairsOf(text: string): string[] {
@@ -26,7 +26,7 @@ function pairsOf(text: string): string[] {
 }
 
 function refKey(num: string): string | null {
-  const parts = num.split(/\s*[/.\-–]\s*/).filter(Boolean);
+  const parts = num.split(/\s*[/.\-\u2010-\u2015]\s*/u).filter(Boolean);
   if (parts.length < 2 || !/^\d+$/.test(parts[0]) || !/^\d+$/.test(parts[1])) return null;
   return `${Number(parts[0])}/${Number(parts[1])}`;
 }

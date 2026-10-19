@@ -24,6 +24,12 @@ describe("post-contrôle des références de textes", () => {
     expect(r.text).toMatch(/absente\(s\) du corpus officiel/);
   });
 
+  it("détecte une référence écrite avec un trait d'union insécable (U+2011) et des espaces fines", async () => {
+    const r = await checkReferences("Code du travail (décret n°\u202f92\u2011020 du 23 janvier 1992).", []);
+    expect(r.unverified).toEqual(["décret n°\u202f92\u2011020"]);
+    expect(r.text).toContain("(⚠️ référence non vérifiée)");
+  });
+
   it("accepte une référence présente dans un extrait cité", () => {
     const r = checkReferencesWith("L'arrêté n° 0012/MINPOSTEL s'applique.", new Set(), ["… l'arrêté n°0012/MINPOSTEL du 3 mars … "]);
     expect(r.unverified).toEqual([]);

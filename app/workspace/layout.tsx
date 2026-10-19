@@ -3,7 +3,7 @@ import "../(compte)/compte.css";
 import "./workspace.css";
 
 export const metadata: Metadata = {
-  title: "Workspace — Co-fondateur IA · Fama AI",
+  title: "Workspace — Co-founder",
   description: "Workspace entreprise : agent qui agit, emails, fournisseurs, démarches, conformité et assistant juridique sourcé.",
 };
 

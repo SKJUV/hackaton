@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fama AI — Co-fondateur IA & assistant juridique",
-    short_name: "Fama AI",
-    description: "Fama AI : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
+    name: "Co-founder — Co-fondateur IA & assistant juridique",
+    short_name: "Co-founder",
+    description: "Co-founder : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0e17",

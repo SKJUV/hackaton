@@ -133,7 +133,7 @@ export default function WorkspacePage() {
   return (
     <div className="ws-shell">
       <aside className="ws-sidebar">
-        <a href="/" className="ws-brand"><Scale size={20} /> <span>Fama AI <em>Co-fondateur IA</em></span></a>
+        <a href="/" className="ws-brand"><Scale size={20} /> <span>Co-founder <em>Workspace</em></span></a>
         <label className="ws-label">Entreprise</label>
         <div className="ws-company-select">
           <Building2 size={15} />

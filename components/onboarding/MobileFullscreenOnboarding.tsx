@@ -6,7 +6,7 @@ import { useState } from "react";
 const tutorialSteps = [
   {
     stepNumber: "01",
-    badge: "Bienvenue sur Fama AI",
+    badge: "Bienvenue sur Co-founder",
     badgeIcon: Scale,
     title: "Le droit camerounais, enfin limpide.",
     description:

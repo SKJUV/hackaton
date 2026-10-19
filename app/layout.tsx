@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fama AI — Co-fondateur IA ancré dans le droit camerounais",
+  title: "Co-founder — Co-fondateur IA ancré dans le droit camerounais",
   description:
-    "Fama AI : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
-  applicationName: "Fama AI",
+    "Co-founder : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
+  applicationName: "Co-founder",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Fama AI",
+    title: "Co-founder",
   },
   icons: {
     icon: "/icons/icon.svg",

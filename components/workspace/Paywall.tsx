@@ -10,7 +10,7 @@ export function Paywall({ me }: { me: Me }) {
   return (
     <div className="ws-paywall au-page">
       <header className="au-top">
-        <a href="/" className="au-brand">⚖️ Fama AI</a>
+        <a href="/" className="au-brand">⚖️ Co-founder</a>
         <nav>
           <a href="/">Assistant juridique (gratuit)</a>
           <a href="/tarifs">Tarifs</a>

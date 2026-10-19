@@ -28,6 +28,12 @@ import { agentModule as structure } from "@/lib/modules/structure/agent";
 import { agentModule as lawWatch } from "@/lib/modules/law-watch/agent";
 // ↓ imports des modules : une ligne par module
 import { agentModule as connecteurs } from "@/lib/modules/mcp/agent";
+import { ideaModule as idea } from "@/lib/modules/entrepreneur/agent";
+import { fundModule as fund } from "@/lib/modules/entrepreneur/agent";
+import { teamModule as team } from "@/lib/modules/entrepreneur/agent";
+import { mentorModule as mentor } from "@/lib/modules/entrepreneur/agent";
+import { marketModule as market } from "@/lib/modules/entrepreneur/agent";
+import { agentModule as etat } from "@/lib/modules/etat/agent";
 import { agentModule as entreprise } from "@/lib/modules/entreprise/agent";
 
 const MODULES: AgentModule[] = [
@@ -36,6 +42,12 @@ const MODULES: AgentModule[] = [
   lawWatch,
   // ↓ modules : une ligne par module, ajoutée en fin de liste
   connecteurs,
+  idea,
+  fund,
+  team,
+  mentor,
+  market,
+  etat,
   entreprise,
 ];
 

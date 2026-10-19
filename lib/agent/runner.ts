@@ -3,7 +3,8 @@ import { summarizeGrounding, type ReplyGrounding } from "./grounding-summary";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
 export type { ReplyGrounding };
 import { runDemoPlanner } from "./demo-planner";
-import { TOOL_MAP, TOOLS, type ToolContext } from "./tools";
+import { ALL_TOOLS as TOOLS, TOOL_MAP } from "./registry";
+import type { ToolContext } from "./tools";
 
 export type AgentTurn = { role: "user" | "assistant"; content: string };
 export type AgentReply = { answer: string; toolTrace: ToolTrace[]; citations: Citation[]; grounding: ReplyGrounding | null; mode: "llm" | "demo"; provider?: string; notice?: string };

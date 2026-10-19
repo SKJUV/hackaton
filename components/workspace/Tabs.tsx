@@ -105,7 +105,8 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
       {pending.map((a) => {
         const email = snap.emails.find((e) => e.id === a.emailId);
         return (
-          <Card key={a.id} title={a.title} actions={<Badge tone="amber">{a.type.replace(/_/g, " ")}</Badge>}>
+          <Card key={a.id} title={a.title} actions={<>{a.module && <Badge tone="violet">{a.module}</Badge>}{email?.channel && email.channel !== "email" && <Badge tone="accent">{email.channel} (démo)</Badge>}<Badge tone="amber">{a.type.replace(/_/g, " ")}</Badge></>}>
+            <LegalGreenLight check={a.legalCheck} />
             {email && (
               <div className="ws-email-preview">
                 <div><span>À</span> {email.to.join(", ")}</div>
@@ -533,6 +534,31 @@ function StepBasis({ query }: { query: string }) {
           )}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Feu vert juridique affiché dans la carte d'approbation : articles du corpus officiel liés à l'action. */
+export function LegalGreenLight({ check }: { check?: import("@/lib/workspace/types").LegalCheck }) {
+  if (!check) return <div className="ws-grounding ws-muted">⏳ Feu vert juridique en cours de calcul…</div>;
+  const official = check.sources.filter((x) => !x.isExample);
+  const tone = check.status === "fonde" ? "is-fonde" : check.status === "partiel" ? "is-partiel" : "is-non-couvert";
+  const title = check.status === "fonde" ? "🟢 Feu vert juridique : textes applicables identifiés" : check.status === "partiel" ? "🟠 Feu orange : textes partiellement applicables" : "⚪ Non couvert par le corpus officiel : vérifiez avec un professionnel";
+  return (
+    <div className={`ws-grounding ws-legal-light ${tone}`} role="note" aria-label="Feu vert juridique">
+      <strong>{title}</strong>
+      {check.status !== "non_couvert" && official.length > 0 && (
+        <ul>
+          {official.map((x) => (
+            <li key={x.id}>
+              {x.document} · p. {x.page}
+              {x.articles.length > 0 && ` · art. ${x.articles.slice(0, 3).join(", ")}`}{" "}
+              {x.file.toLowerCase().endsWith(".pdf") && <a href={`/api/document?file=${encodeURIComponent(x.file)}#page=${x.page}`} target="_blank" rel="noreferrer">ouvrir</a>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <small className="ws-muted">Contrôle informatif (lexical) : la décision reste humaine.</small>
     </div>
   );
 }

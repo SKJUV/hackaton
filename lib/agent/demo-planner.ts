@@ -1,6 +1,7 @@
 import type { Citation } from "@/lib/legal/citations";
 import type { Company, ToolTrace } from "@/lib/workspace/types";
-import { TOOL_MAP, type ToolContext } from "./tools";
+import { DEMO_INTENTS, TOOL_MAP } from "./registry";
+import type { ToolContext } from "./tools";
 import { summarizeGrounding } from "./grounding-summary";
 
 type Basis = { statut: string; libelle: string };
@@ -91,7 +92,11 @@ export async function runDemoPlanner(company: Company, message: string) {
   const trace: ToolTrace[] = [];
   const lines: string[] = [];
   const call = async (name: string, input: Record<string, unknown>) => {
-    const tool = TOOL_MAP.get(name)!;
+    const tool = TOOL_MAP.get(name);
+    if (!tool) {
+      trace.push({ tool: name, input, summary: "Outil inconnu", ok: false });
+      return null;
+    }
     try {
       const r = await tool.run(input, ctx);
       trace.push({ tool: name, input, summary: r.summary, ok: true });
@@ -230,5 +235,17 @@ export async function runDemoPlanner(company: Company, message: string) {
         break;
     }
   }
+  // 3. Intentions déclarées par les modules (registre lib/agent/registry.ts).
+  const normalized = norm(message);
+  for (const intent of DEMO_INTENTS) {
+    if (!intent.test.test(normalized)) continue;
+    try {
+      const line = await intent.run({ company, message, call, ctx });
+      if (line) lines.push(line);
+    } catch (error) {
+      lines.push(`⚠️ ${intent.name} : ${error instanceof Error ? error.message : "erreur"}`);
+    }
+  }
+
   return { answer: lines.join("\n\n"), toolTrace: trace, citations: ctx.citations, grounding: summarizeGrounding(ctx.groundings), mode: "demo" as const };
 }

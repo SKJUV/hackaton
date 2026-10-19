@@ -92,6 +92,30 @@ export async function preGround(question: string, ctx: ToolContext, trace: ToolT
   return `RECHERCHE JURIDIQUE PRÉALABLE (outil rechercher_textes_juridiques exécuté automatiquement sur la question) :\n${truncate(result.data, 7000)}`;
 }
 
+/**
+ * Paliers gratuits (ex. Groq : 8K jetons/minute) : la boucle d'outils enchaîne plusieurs appels
+ * et dépasse vite le quota. Sur 429, on attend le délai `retry-after` (plafonné) puis on réessaie.
+ */
+async function fetchWithRateLimitRetry(url: string, init: RequestInit, attempts = 3): Promise<Response> {
+  let res: Response | null = null;
+  for (let i = 0; i < attempts; i += 1) {
+    res = await fetch(url, { ...init, signal: AbortSignal.timeout(45000) });
+    if (res.status !== 429 || i === attempts - 1) return res;
+    const header = Number(res.headers.get("retry-after"));
+    const reset = parseResetSeconds(res.headers.get("x-ratelimit-reset-tokens"));
+    const wait = Math.min(Math.max(Number.isFinite(header) && header > 0 ? header : reset ?? 5, 1), 25);
+    await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+  }
+  return res as Response;
+}
+
+function parseResetSeconds(value: string | null): number | null {
+  if (!value) return null;
+  const m = /^(?:(\d+)m)?(?:([\d.]+)s)?$/.exec(value.trim());
+  if (!m) return null;
+  return Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0);
+}
+
 async function runOpenAI(p: Extract<Provider, { kind: "openai" }>, company: Company, history: AgentTurn[], ctx: ToolContext, trace: ToolTrace[], grounding: string) {
   const messages: Record<string, unknown>[] = [
     { role: "system", content: systemPrompt(company) },
@@ -100,11 +124,10 @@ async function runOpenAI(p: Extract<Provider, { kind: "openai" }>, company: Comp
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
   for (let step = 0; step < MAX_STEPS; step += 1) {
-    const res = await fetch(p.url, {
+    const res = await fetchWithRateLimitRetry(p.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
-      body: JSON.stringify({ model: p.model, messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 2000 }),
-      signal: AbortSignal.timeout(45000),
+      body: JSON.stringify({ model: p.model, messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 1200 }),
     });
     if (!res.ok) throw new Error(`${p.name} HTTP ${res.status}`);
     const body = (await res.json()) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] };

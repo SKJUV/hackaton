@@ -102,7 +102,7 @@ export default async function VerifierPage({ params, searchParams }: { params: P
       {p.methodologyVersion !== METHODOLOGY.version && <div className="vf-warn">Cette attestation a été calculée avec la méthodologie {p.methodologyVersion} ; la version actuelle est {METHODOLOGY.version}.</div>}
 
       <h2>Preuve cryptographique</h2>
-      <p className="vf-muted">Identifiant : <code>{p.id}</code> · Clé : <code>{p.keyId}</code> · Contenu signé et signature en JSON : <a href={`/api/verifier/${p.id}`}>/api/verifier/{p.id}</a> · Clé publique : <a href="/api/verifier/cle">/api/verifier/cle</a></p>
+      <p className="vf-muted">Identifiant : <code>{p.id}</code> · Clé : <code>{p.keyId}</code> · Contenu signé et signature en JSON : <a href={`/api/verifier/${p.id}${token ? `?a=${token}` : ""}`}>/api/verifier/{p.id}</a> · Clé publique : <a href="/api/verifier/cle">/api/verifier/cle</a></p>
       <p className="vf-muted">Vérification hors ligne : reconstituez le JSON canonique du champ <code>payload</code> (clés triées, sans espaces) et vérifiez la signature Ed25519 (base64url) avec la clé publique ci-dessous.</p>
       <pre>{att.signature}</pre>
       <pre>{att.publicKeyPem}</pre>

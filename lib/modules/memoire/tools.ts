@@ -135,7 +135,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     async run(_i, ctx) {
       const att = await issueAttestation(ctx.companyId, "agent");
       return {
-        summary: `Attestation signée : ${att.payload.score}/100 — vérifiable sur /verifier/${att.id}`,
+        summary: `Attestation signée : ${att.payload.score}/100 — vérifiable via le lien signé url_verification`,
         data: { attestationId: att.id, url_verification: verifyUrl(verificationPath(att)), score: att.payload.score, cle: att.payload.keyId, demo: att.payload.demo, expire_le: att.payload.expiresAt.slice(0, 10) },
       };
     },

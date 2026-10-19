@@ -1,6 +1,6 @@
 import { assertCompanyAccess } from "@/lib/workspace/access";
 import { handlePaid, readJson, s } from "@/lib/workspace/http";
-import { currentScore, issueAttestation, revokeAttestation } from "@/lib/modules/memoire/attestations";
+import { currentScore, issueAttestation, revokeAttestation, verificationPath } from "@/lib/modules/memoire/attestations";
 import { actorName } from "@/lib/modules/memoire/overview";
 import { METHODOLOGY } from "@/lib/modules/memoire/score";
 import { assertMemoireAccess } from "@/lib/modules/memoire/store";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const companyId = s(b.companyId);
     await assertCompanyAccess(companyId, viewer);
     const att = await issueAttestation(companyId, await actorName(companyId, s(b.memberId)));
-    return { id: att.id, url: `/verifier/${att.id}`, payload: att.payload };
+    return { id: att.id, url: verificationPath(att), payload: att.payload };
   });
 }
 

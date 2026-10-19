@@ -116,20 +116,52 @@ function parseResetSeconds(value: string | null): number | null {
   return Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0);
 }
 
+/**
+ * Groq valide strictement les appels d'outils : gpt-oss envoie souvent `null` pour un champ
+ * optionnel. On autorise donc `null` sur les propriétés non requises (supprimées avant exécution).
+ */
+function nullableOptionals(schema: unknown): unknown {
+  if (!schema || typeof schema !== "object") return schema;
+  const s = schema as { properties?: Record<string, Record<string, unknown>>; required?: string[] };
+  if (!s.properties) return schema;
+  const required = new Set(s.required ?? []);
+  const properties = Object.fromEntries(
+    Object.entries(s.properties).map(([key, prop]) => {
+      if (required.has(key) || typeof prop.type !== "string") return [key, prop];
+      const next: Record<string, unknown> = { ...prop, type: [prop.type, "null"] };
+      if (Array.isArray(prop.enum)) next.enum = [...prop.enum, null];
+      return [key, next];
+    }),
+  );
+  return { ...s, properties };
+}
+
 async function runOpenAI(p: Extract<Provider, { kind: "openai" }>, company: Company, history: AgentTurn[], ctx: ToolContext, trace: ToolTrace[], grounding: string) {
   const messages: Record<string, unknown>[] = [
     { role: "system", content: systemPrompt(company) },
     ...history.map((h) => ({ role: h.role, content: h.content })),
     { role: "system", content: grounding },
   ];
-  const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
+  const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: nullableOptionals(t.parameters) } }));
+  let toolRetryUsed = false;
   for (let step = 0; step < MAX_STEPS; step += 1) {
     const res = await fetchWithRateLimitRetry(p.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.key}` },
       body: JSON.stringify({ model: p.model, messages, tools, tool_choice: "auto", temperature: 0.2, max_tokens: 1200 }),
     });
-    if (!res.ok) throw new Error(`${p.name} HTTP ${res.status}`);
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      const code = /"code"\s*:\s*"([^"]+)"/.exec(detail)?.[1];
+      // gpt-oss (Groq) produit parfois un appel d'outil mal formé : on retente l'étape une fois.
+      if (res.status === 400 && code === "tool_use_failed" && !toolRetryUsed) {
+        toolRetryUsed = true;
+        step -= 1;
+        continue;
+      }
+      console.error(`${p.name} HTTP ${res.status}`, detail.slice(0, 500));
+      throw new Error(`${p.name} HTTP ${res.status}${code ? ` (${code})` : ""}`);
+    }
     const body = (await res.json()) as { choices?: { message?: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] } }[] };
     const msg = body.choices?.[0]?.message;
     if (!msg) throw new Error(`${p.name} : réponse vide`);
@@ -139,6 +171,8 @@ async function runOpenAI(p: Extract<Provider, { kind: "openai" }>, company: Comp
       let args: Record<string, unknown> = {};
       try {
         args = JSON.parse(call.function.arguments || "{}");
+        // Champs optionnels envoyés à null par certains modèles → considérés comme absents.
+        for (const key of Object.keys(args)) if (args[key] === null) delete args[key];
       } catch {
         /* arguments invalides → objet vide */
       }

@@ -46,7 +46,7 @@ export function LawChangeCard({ snap, refresh, notify }: Pick<TabProps, "snap" |
       {open.length === 0 ? (
         <p>✅ Aucun document à revoir.</p>
       ) : (
-        <ul className="ws-list">
+        <ul className="lw-list">
           {open.map((i) => (
             <li key={i.documentId}>
               <strong>{i.title}</strong> {i.simulated && <Badge tone="violet">démo</Badge>} <Badge tone="amber">à revoir</Badge>

@@ -70,7 +70,7 @@ export const NAV: NavEntry[] = [
   { id: "memoire", label: "Mémoire", icon: Brain, level: "entreprise", kind: "module", team: "memoire", description: "Questions/réponses sur l'historique avec liens vers les sources." },
   { id: "reunions", label: "Salle de réunion", icon: Mic, level: "entreprise", kind: "module", team: "memoire", description: "Transcription, résumé, décisions, tâches, « ce que j'ai manqué »." },
   { id: "score", label: "Score de crédibilité", icon: BadgeCheck, level: "entreprise", kind: "module", team: "memoire", description: "Score signé cryptographiquement et vérifiable publiquement." },
-  { id: "comms", label: "Communications", icon: MessagesSquare, level: "entreprise", kind: "module", team: "à attribuer", description: "Boîte unifiée (emails, WhatsApp en démo), classement, réponses suggérées." },
+  { id: "comms", label: "Communications", icon: MessagesSquare, level: "entreprise", kind: "module", team: "mcp-connecteurs", description: "Boîte unifiée (emails, WhatsApp en démo) via les connecteurs MCP, classement, réponses suggérées (envois via approbation, simulés par défaut)." },
   { id: "conformite", label: "Conformité & calendrier", icon: CalendarCheck, level: "entreprise", kind: "core" },
   { id: "veille", label: "Veille réglementaire", icon: Radar, level: "entreprise", kind: "core" },
   { id: "equipe", label: "Membres", icon: Users, level: "entreprise", kind: "core" },

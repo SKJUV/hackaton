@@ -16,4 +16,9 @@ export const MODULE_SLOTS: Record<string, ComponentType<TabProps>> = {
   // ↓ modules : une ligne par module, ajoutée en fin de liste
   connecteurs: load(() => import("@/components/modules/mcp/ConnectorsPanel")),
   comms: load(() => import("@/components/modules/mcp/CommsPanel")),
+  idea: load(() => import("@/components/modules/idea/IdeaPanel")),
+  fund: load(() => import("@/components/modules/fund/FundPanel")),
+  team: load(() => import("@/components/modules/team/TeamPanel")),
+  mentor: load(() => import("@/components/modules/mentor/MentorPanel")),
+  market: load(() => import("@/components/modules/market/MarketPanel")),
 };

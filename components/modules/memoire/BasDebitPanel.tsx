@@ -9,7 +9,7 @@ import { LITE_KEY, setLiteMode } from "./LiteModeBoot";
 import "./memoire.css";
 
 /** Onglet « Bas débit & vocal ». */
-export function BasDebitTab({ snap }: TabProps) {
+export default function BasDebitPanel({ snap }: TabProps) {
   const [on, setOn] = useState(false);
   useEffect(() => setOn(localStorage.getItem(LITE_KEY) === "1"), []);
   return (

@@ -14,7 +14,7 @@ import "./memoire.css";
 type Transcription = { text: string; provider: string; demo: boolean; notice?: string };
 
 /** Onglet « Salle de réunion » : saisie texte / dictée / audio, analyse, tâches, ce que j'ai manqué, PV. */
-export function ReunionTab({ snap, memberId, refresh, notify, goTo }: TabProps) {
+export default function ReunionsPanel({ snap, memberId, refresh, notify, goTo }: TabProps) {
   const { data, error, reload } = useMemoire(snap.company.id);
   const [selected, setSelected] = useState<string | null>(null);
   const [title, setTitle] = useState("");

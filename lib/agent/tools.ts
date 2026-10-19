@@ -22,9 +22,8 @@ import {
   updateChecklistStep,
 } from "@/lib/workspace/service";
 import type { StepStatus } from "@/lib/workspace/types";
-import { MEMOIRE_TOOLS } from "@/lib/modules/memoire/tools";
 
-export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[] };
+export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[]; /** Outils découverts dynamiquement (connecteurs MCP / natifs). */ extraTools?: AgentTool[] };
 export type ToolResult = { summary: string; data: unknown };
 type JsonSchema = { type: "object"; properties: Record<string, unknown>; required?: string[] };
 export type AgentTool = {
@@ -72,10 +71,10 @@ function basisData(g: Grounding & { label: string }) {
   };
 }
 
-const sectorQuery = (c: { sector: string; sectorKeywords: string[]; legalForm: string }) =>
+export const sectorQuery = (c: { sector: string; sectorKeywords: string[]; legalForm: string }) =>
   `régime juridique ${c.sector} ${c.sectorKeywords.slice(0, 4).join(" ")} autorisation licence`;
 
-const DOCUMENT_QUERIES: Record<string, string> = {
+export const DOCUMENT_QUERIES: Record<string, string> = {
   statuts: "statuts société capital social associés gérant",
   contrat_prestation: "contrat prestation services obligations parties prix",
   nda: "confidentialité secret informations divulgation",
@@ -213,7 +212,7 @@ export const TOOLS: AgentTool[] = [
       const snap = await company(ctx);
       const g = await legalBasis(ctx, sectorQuery(snap.company));
       const content = (str(input.contenu_markdown) || generateBusinessPlan(snap.company, str(input.notes))) + "\n" + groundingMarkdown(g);
-      const doc = await saveDocument(ctx.companyId, { title: `Business plan — ${snap.company.name}`, kind: "business_plan", content }, "agent");
+      const doc = await saveDocument(ctx.companyId, { title: `Business plan — ${snap.company.name}`, kind: "business_plan", content, legalQuery: g.query, legalSources: g.sources }, "agent");
       return { summary: `Business plan enregistré dans Documents — ${g.label}`, data: { documentId: doc.id, fondement_juridique: basisData(g), apercu: content.slice(0, 600) } };
     },
   },
@@ -226,7 +225,7 @@ export const TOOLS: AgentTool[] = [
       const months = typeof input.horizon_mois === "number" ? Math.min(Math.max(input.horizon_mois, 2), 24) : 6;
       const g = await legalBasis(ctx, sectorQuery(snap.company));
       const content = (str(input.contenu_markdown) || generateRoadmap(snap.company, months)) + "\n" + groundingMarkdown(g);
-      const doc = await saveDocument(ctx.companyId, { title: `Roadmap ${months} mois`, kind: "roadmap", content }, "agent");
+      const doc = await saveDocument(ctx.companyId, { title: `Roadmap ${months} mois`, kind: "roadmap", content, legalQuery: g.query, legalSources: g.sources }, "agent");
       return { summary: `Roadmap ${months} mois enregistrée — ${g.label}`, data: { documentId: doc.id, fondement_juridique: basisData(g), apercu: content.slice(0, 600) } };
     },
   },
@@ -278,7 +277,7 @@ export const TOOLS: AgentTool[] = [
       const details = Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "string")) as Record<string, string>;
       const g = await legalBasis(ctx, `${DOCUMENT_QUERIES[kind] ?? LEGAL_TEMPLATE_LABELS[kind]} ${details.objet ?? ""}`.trim());
       const content = generateLegalDocument(kind, snap.company, snap.members, details) + "\n" + groundingMarkdown(g);
-      const doc = await saveDocument(ctx.companyId, { title: `${LEGAL_TEMPLATE_LABELS[kind]}${details.partie ? ` — ${details.partie}` : ""}`, kind: kind === "statuts" ? "statuts" : kind === "pv_ag" ? "pv" : "contrat", content, needsReview: true }, "agent");
+      const doc = await saveDocument(ctx.companyId, { title: `${LEGAL_TEMPLATE_LABELS[kind]}${details.partie ? ` — ${details.partie}` : ""}`, kind: kind === "statuts" ? "statuts" : kind === "pv_ag" ? "pv" : "contrat", content, needsReview: true, legalQuery: g.query, legalSources: g.sources }, "agent");
       return { summary: `Document généré : ${LEGAL_TEMPLATE_LABELS[kind]} (à valider) — ${g.label}`, data: { documentId: doc.id, fondement_juridique: basisData(g) } };
     },
   },
@@ -341,7 +340,6 @@ export const TOOLS: AgentTool[] = [
       };
     },
   },
-  ...MEMOIRE_TOOLS,
 ];
 
 export const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));

@@ -3,6 +3,7 @@ import { getMailConfig, sendMail } from "@/lib/mail";
 import { buildChecklist, buildObligations } from "./seed";
 import { newId, nowIso, readData, withData } from "./store";
 import type {
+  Approval,
   ApprovalType,
   Company,
   DocumentKind,
@@ -12,6 +13,7 @@ import type {
   Task,
   TaskStatus,
   WorkspaceData,
+  WorkspaceDocument,
 } from "./types";
 
 export class WorkspaceError extends Error {
@@ -30,6 +32,9 @@ export function log(data: WorkspaceData, companyId: string, actor: string, actio
   data.activity.unshift({ id: newId("act"), companyId, actor, action, details, createdAt: nowIso() });
   if (data.activity.length > 2000) data.activity.length = 2000;
 }
+
+import { attachLegalCheck } from "./legal-check";
+import { hashesFor } from "@/lib/legal/fingerprint";
 
 const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
@@ -162,15 +167,20 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus, actor
 
 /* ------------------------------------------------------ Emails & approbation */
 
-function createEmailWithApproval(
+const PHONE_RE = /^\+?[0-9 ()X.-]{6,20}$/i;
+
+/** Crée l'action externe (email ou autre canal) et sa demande d'approbation. À appeler dans withData(). */
+export function createEmailWithApproval(
   data: WorkspaceData,
   companyId: string,
-  input: { to: string[]; cc?: string[]; subject: string; body: string; relatedType?: Email["relatedType"]; relatedId?: string },
-  approval: { type: ApprovalType; title: string; summary: string; quoteId?: string },
+  input: { to: string[]; cc?: string[]; subject: string; body: string; relatedType?: Email["relatedType"]; relatedId?: string; channel?: Email["channel"] },
+  approval: { type: ApprovalType; title: string; summary: string; quoteId?: string; module?: string },
   actor: string,
 ) {
+  const channel = input.channel ?? "email";
   const recipients = input.to.map((t) => t.trim()).filter(Boolean);
-  if (!recipients.length || !recipients.every((r) => EMAIL_RE.test(r))) throw new WorkspaceError("Destinataire(s) email invalide(s).");
+  const valid = channel === "email" ? EMAIL_RE : PHONE_RE;
+  if (!recipients.length || !recipients.every((r) => valid.test(r))) throw new WorkspaceError(channel === "email" ? "Destinataire(s) email invalide(s)." : "Numéro(s) de destinataire invalide(s).");
   if (!input.subject?.trim() || !input.body?.trim()) throw new WorkspaceError("Objet et corps de l'email requis.");
   const email: Email = {
     id: newId("eml"),
@@ -180,13 +190,14 @@ function createEmailWithApproval(
     subject: input.subject.trim(),
     body: input.body.trim(),
     status: "en_attente_approbation",
+    channel: channel === "email" ? undefined : channel,
     relatedType: input.relatedType ?? "libre",
     relatedId: input.relatedId,
     createdBy: actor,
     createdAt: nowIso(),
   };
   data.emails.push(email);
-  const appr = {
+  const appr: Approval = {
     id: newId("apr"),
     companyId,
     type: approval.type,
@@ -194,6 +205,7 @@ function createEmailWithApproval(
     summary: approval.summary,
     emailId: email.id,
     quoteId: approval.quoteId,
+    module: approval.module,
     status: "en_attente" as const,
     requestedBy: actor,
     createdAt: nowIso(),
@@ -208,7 +220,7 @@ export async function draftEmail(
   input: { to: string[]; cc?: string[]; subject: string; body: string },
   actor = "agent",
 ) {
-  return withData((data) => {
+  const res = await withData((data) => {
     requireCompany(data, companyId);
     return createEmailWithApproval(
       data,
@@ -218,10 +230,14 @@ export async function draftEmail(
       actor,
     );
   });
+  res.approval.legalCheck = (await attachLegalCheck([res.approval.id], `${input.subject} ${input.body}`)) ?? undefined;
+  return res;
 }
 
 /** Valide ou rejette une action externe. L'envoi n'a lieu qu'ici. */
 export async function decideApproval(approvalId: string, decision: "approuver" | "rejeter", decidedBy: string, note?: string) {
+  // Module connecteurs : action de connecteur (MCP / API native) exécutée à la validation.
+  if ((await readData()).approvals.find((a) => a.id === approvalId)?.type === "connecteurs_action") return (await import("@/lib/modules/mcp/connectors")).decideConnectorApproval(approvalId, decision, decidedBy, note);
   // Phase 1 : verrouiller la décision.
   const pending = await withData((data) => {
     const approval = data.approvals.find((a) => a.id === approvalId);
@@ -246,7 +262,10 @@ export async function decideApproval(approvalId: string, decision: "approuver" |
   if (!pending) return { status: "rejetee" as const };
 
   // Phase 2 : envoi (hors verrou, réseau possible en mode live).
-  const result = await sendMail({ to: pending.email.to, cc: pending.email.cc, subject: pending.email.subject, text: pending.email.body });
+  const result =
+    pending.email.channel && pending.email.channel !== "email"
+      ? { ok: true, simulated: true, provider: `simulation-${pending.email.channel}`, messageId: undefined as string | undefined, error: undefined as string | undefined }
+      : await sendMail({ to: pending.email.to, cc: pending.email.cc, subject: pending.email.subject, text: pending.email.body });
 
   return withData((data) => {
     const email = data.emails.find((e) => e.id === pending.email.id)!;
@@ -314,7 +333,7 @@ export async function requestQuotes(
 ) {
   if (!input.supplierIds?.length) throw new WorkspaceError("Choisissez au moins un fournisseur.");
   if (!input.need?.trim()) throw new WorkspaceError("Décrivez le besoin.");
-  return withData((data) => {
+  const created = await withData((data) => {
     const company = requireCompany(data, companyId);
     const owner = data.members.find((m) => m.companyId === companyId && m.role === "proprietaire");
     const created = [];
@@ -348,6 +367,8 @@ export async function requestQuotes(
     log(data, companyId, actor, "devis.demande", `${created.length} demande(s) de devis préparée(s) : ${input.need}.`);
     return created;
   });
+  await attachLegalCheck(created.map((c) => c.approvalId), `contrat fourniture vente ${input.need} obligations vendeur`);
+  return created;
 }
 
 /** SEED : simule la réponse d'un fournisseur pour visualiser le suivi et la comparaison. */
@@ -374,7 +395,7 @@ export async function simulateQuoteResponse(quoteId: string) {
 }
 
 export async function followUpQuote(quoteId: string, actor = "agent") {
-  return withData((data) => {
+  const res = await withData((data) => {
     const quote = data.quotes.find((q) => q.id === quoteId);
     if (!quote) throw new WorkspaceError("Devis introuvable.", 404);
     if (quote.status !== "envoyee") throw new WorkspaceError("Seules les demandes envoyées sans réponse peuvent être relancées.", 409);
@@ -396,6 +417,8 @@ export async function followUpQuote(quoteId: string, actor = "agent") {
     );
     return { quote, approvalId: res.approval.id };
   });
+  await attachLegalCheck([res.approvalId], `relance contrat fourniture ${res.quote.need}`);
+  return res;
 }
 
 export async function decideQuote(quoteId: string, decision: "acceptee" | "refusee", actor = "utilisateur") {
@@ -413,13 +436,19 @@ export async function decideQuote(quoteId: string, decision: "acceptee" | "refus
 
 export async function saveDocument(
   companyId: string,
-  input: { title: string; kind: DocumentKind; content: string; needsReview?: boolean },
+  input: { title: string; kind: DocumentKind; content: string; needsReview?: boolean; legalQuery?: string; legalSources?: WorkspaceDocument["legalSources"] },
   actor = "utilisateur",
 ) {
   if (!input.title?.trim() || !input.content?.trim()) throw new WorkspaceError("Titre et contenu requis.");
+  const official = (input.legalSources ?? []).filter((x) => !x.isExample);
+  const corpusHashes = official.length ? await hashesFor(official.map((x) => x.file)) : undefined;
   return withData((data) => {
     requireCompany(data, companyId);
-    const doc = { id: newId("doc"), companyId, title: input.title.trim(), kind: input.kind, content: input.content, createdBy: actor, createdAt: nowIso(), updatedAt: nowIso(), needsReview: input.needsReview };
+    const doc: WorkspaceDocument = {
+      id: newId("doc"), companyId, title: input.title.trim(), kind: input.kind, content: input.content, createdBy: actor,
+      createdAt: nowIso(), updatedAt: nowIso(), needsReview: input.needsReview,
+      legalQuery: input.legalQuery, legalSources: input.legalSources, corpusHashes,
+    };
     data.documents.push(doc);
     log(data, companyId, actor, "document.creation", `Document « ${doc.title} » enregistré.`);
     return doc;

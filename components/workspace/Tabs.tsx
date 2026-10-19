@@ -6,7 +6,9 @@ import type { Citation } from "@/lib/legal/citations";
 import type { LegalSearch } from "@/lib/legal/corpus";
 import type { Snapshot } from "@/lib/workspace/service";
 import type { WatchAlert } from "@/lib/compliance";
+import { LawChangeCard } from "@/components/modules/law-watch/LawChangeCard";
 import { api, Badge, Card, Empty, ExampleBadge, fmtDate, fmtMoney, Markdown, StatusBadge } from "./ui";
+import { ApprovalAction } from "@/components/modules/mcp/ApprovalAction";
 
 export type TabProps = {
   snap: Snapshot;
@@ -94,7 +96,7 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
   const pending = snap.approvals.filter((a) => a.status === "en_attente");
   const done = snap.approvals.filter((a) => a.status !== "en_attente");
   const decide = (id: string, decision: "approuver" | "rejeter") =>
-    run(id, () => api(`/api/workspace/approvals/${id}`, "POST", { decision, memberId, note: notes[id] }), decision === "approuver" ? (snap.mail.mode === "simulation" ? "Validé — email envoyé en simulation" : "Validé — email envoyé") : "Rejeté");
+    run(id, () => api(`/api/workspace/approvals/${id}`, "POST", { decision, memberId, note: notes[id] }), decision === "approuver" ? (snap.approvals.find((x) => x.id === id)?.type === "connecteurs_action" ? "Validé — action de connecteur exécutée (voir le journal)" : snap.mail.mode === "simulation" ? "Validé — email envoyé en simulation" : "Validé — email envoyé") : "Rejeté");
   return (
     <div className="ws-stack">
       <div className="ws-info">
@@ -105,7 +107,8 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
       {pending.map((a) => {
         const email = snap.emails.find((e) => e.id === a.emailId);
         return (
-          <Card key={a.id} title={a.title} actions={<Badge tone="amber">{a.type.replace(/_/g, " ")}</Badge>}>
+          <Card key={a.id} title={a.title} actions={<>{a.module && <Badge tone="violet">{a.module}</Badge>}{email?.channel && email.channel !== "email" && <Badge tone="accent">{email.channel} (démo)</Badge>}<Badge tone="amber">{a.type.replace(/_/g, " ")}</Badge></>}>
+            <LegalGreenLight check={a.legalCheck} />
             {email && (
               <div className="ws-email-preview">
                 <div><span>À</span> {email.to.join(", ")}</div>
@@ -113,6 +116,7 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
                 <pre>{email.body}</pre>
               </div>
             )}
+            {a.type === "connecteurs_action" && <ApprovalAction summary={a.summary} />}
             <div className="ws-approve-bar">
               <input placeholder="Note (optionnelle)" value={notes[a.id] ?? ""} onChange={(e) => setNotes({ ...notes, [a.id]: e.target.value })} />
               <button className="ws-btn ws-btn-ghost" disabled={busy === a.id} onClick={() => void decide(a.id, "rejeter")}><X size={15} /> Rejeter</button>
@@ -407,7 +411,7 @@ export function Compliance({ snap, refresh, notify }: TabProps) {
 
 /* --------------------------------------------------------------------- Veille */
 
-export function Watch({ snap }: TabProps) {
+export function Watch({ snap, refresh, notify }: TabProps) {
   const [data, setData] = useState<{ keywords: string[]; alerts: WatchAlert[] } | null>(null);
   useEffect(() => {
     setData(null);
@@ -416,6 +420,7 @@ export function Watch({ snap }: TabProps) {
   if (!data) return <Empty>Analyse du corpus…</Empty>;
   return (
     <div className="ws-stack">
+      <LawChangeCard snap={snap} refresh={refresh} notify={notify} />
       <div className="ws-info">Mots-clés surveillés : {data.keywords.map((k) => <Badge key={k} tone="accent">{k}</Badge>)} — tout nouveau texte déposé par l&apos;État dans <code>corpus/officiel/</code> remonte en priorité.</div>
       {data.alerts.length === 0 && <Empty>Aucun texte pertinent trouvé (l&apos;index est-il construit ?).</Empty>}
       {data.alerts.map((a) => (
@@ -533,6 +538,31 @@ function StepBasis({ query }: { query: string }) {
           )}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Feu vert juridique affiché dans la carte d'approbation : articles du corpus officiel liés à l'action. */
+export function LegalGreenLight({ check }: { check?: import("@/lib/workspace/types").LegalCheck }) {
+  if (!check) return <div className="ws-grounding ws-muted">⏳ Feu vert juridique en cours de calcul…</div>;
+  const official = check.sources.filter((x) => !x.isExample);
+  const tone = check.status === "fonde" ? "is-fonde" : check.status === "partiel" ? "is-partiel" : "is-non-couvert";
+  const title = check.status === "fonde" ? "🟢 Feu vert juridique : textes applicables identifiés" : check.status === "partiel" ? "🟠 Feu orange : textes partiellement applicables" : "⚪ Non couvert par le corpus officiel : vérifiez avec un professionnel";
+  return (
+    <div className={`ws-grounding ws-legal-light ${tone}`} role="note" aria-label="Feu vert juridique">
+      <strong>{title}</strong>
+      {check.status !== "non_couvert" && official.length > 0 && (
+        <ul>
+          {official.map((x) => (
+            <li key={x.id}>
+              {x.document} · p. {x.page}
+              {x.articles.length > 0 && ` · art. ${x.articles.slice(0, 3).join(", ")}`}{" "}
+              {x.file.toLowerCase().endsWith(".pdf") && <a href={`/api/document?file=${encodeURIComponent(x.file)}#page=${x.page}`} target="_blank" rel="noreferrer">ouvrir</a>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <small className="ws-muted">Contrôle informatif (lexical) : la décision reste humaine.</small>
     </div>
   );
 }

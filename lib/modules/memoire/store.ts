@@ -1,3 +1,4 @@
+import { moduleState } from "@/lib/modules/state";
 import { canAccessCompany } from "@/lib/workspace/access";
 import { WorkspaceError, log } from "@/lib/workspace/service";
 import { newId, nowIso, readData, withData } from "@/lib/workspace/store";
@@ -5,18 +6,20 @@ import type { Task, WorkspaceData } from "@/lib/workspace/types";
 import type { Viewer } from "@/lib/workspace/access";
 import type { Decision, LegalSnapshot, Meeting, MeetingAnalysis, MemoireData, SourceRef } from "./types";
 
-/** Les données du module vivent dans `WorkspaceData.memoire` (champ optionnel, migration implicite). */
+/**
+ * Les données du module vivent dans `data.modules.memoire` (conventions : moduleState, WorkspaceData intact).
+ * Chaque élément porte `companyId` ; la démo (co_kmerlog) est injectée par ensureMemoireSeed() car
+ * l'instantané juridique des décisions de démo est calculé de façon asynchrone dans le corpus.
+ */
+const emptyState = (): MemoireData => ({ decisions: [], meetings: [], attestations: [], seeded: [] });
+
 export function memo(data: WorkspaceData): MemoireData {
-  if (!data.memoire) data.memoire = { decisions: [], meetings: [], attestations: [], seeded: [] };
-  data.memoire.decisions ??= [];
-  data.memoire.meetings ??= [];
-  data.memoire.attestations ??= [];
-  data.memoire.seeded ??= [];
-  return data.memoire;
+  return moduleState<MemoireData>(data, "memoire", emptyState);
 }
 
+/** Lecture (sur la copie renvoyée par readData) : même accès que memo(). */
 export function readMemo(data: WorkspaceData): MemoireData {
-  return data.memoire ?? { decisions: [], meetings: [], attestations: [], seeded: [] };
+  return memo(data);
 }
 
 type Kind = "decisions" | "meetings" | "attestations";

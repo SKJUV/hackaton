@@ -1,6 +1,6 @@
-import type { AgentTool, ToolContext } from "@/lib/agent/tools";
+import { legalBasis, type AgentTool, type ToolContext } from "@/lib/agent/tools";
 import { currentScore, issueAttestation } from "./attestations";
-import { basisData, groundInCtx, snapshotLines, toSnapshot } from "./legal";
+import { basisData, snapshotLines, toSnapshot } from "./legal";
 import { liteBriefing } from "./lite";
 import { listMeetings, recordMeeting, savePvDocument, whatIMissed } from "./meetings";
 import { askMemory, listDecisions, recordDecision, STATUS_LABEL } from "./memory";
@@ -10,7 +10,7 @@ import type { DecisionStatus } from "./types";
 
 /**
  * Outils d'agent du module « memoire ». Exposés aux modèles (Groq/OpenAI/Gemini) ET au planificateur démo
- * via le registre unique `TOOLS` de lib/agent/tools.ts. N'importe le registre qu'en type (pas de cycle).
+ * via le registre des modules (lib/agent/registry.ts, voir ./agent.ts).
  */
 const str = (v: unknown, fallback = "") => (typeof v === "string" ? v : fallback);
 const strArr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? v.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean) : []);
@@ -35,7 +35,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "registre_decisions",
+    name: "memoire_registre_decisions",
     description: "Liste le registre des décisions de l'entreprise (filtre optionnel par statut proposee/adoptee/revisee/abandonnee ou par mots-clés), avec leur fondement juridique figé.",
     parameters: { type: "object", properties: { statut: { type: "string", enum: ["proposee", "adoptee", "revisee", "abandonnee"] }, recherche: { type: "string" } } },
     async run(input, ctx) {
@@ -47,7 +47,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "enregistrer_decision",
+    name: "memoire_enregistrer_decision",
     description: "Enregistre une décision au registre (titre, décision, raisons, alternatives écartées). La recherche juridique est faite au moment de l'enregistrement et les articles trouvés sont figés avec la décision.",
     parameters: {
       type: "object",
@@ -63,14 +63,14 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     async run(input, ctx) {
       const titre = str(input.titre);
       const decision = str(input.decision) || titre;
-      const g = await groundInCtx(ctx, `${titre} ${decision}`.slice(0, 300));
+      const g = await legalBasis(ctx, `${titre} ${decision}`.slice(0, 300), 3);
       const status = (["proposee", "adoptee", "revisee", "abandonnee"].includes(str(input.statut)) ? str(input.statut) : "adoptee") as DecisionStatus;
       const d = await recordDecision(ctx.companyId, { title: titre, decision, rationale: str(input.raisons), alternatives: strArr(input.alternatives), status, decidedBy: "agent (à la demande de l'utilisateur)" }, "agent", toSnapshot(g));
       return { summary: `Décision « ${d.title} » enregistrée (${STATUS_LABEL[d.status]}) — ${g.label}`, data: { decisionId: d.id, fondement_juridique: basisData(g) } };
     },
   },
   {
-    name: "reunion_analyser",
+    name: "memoire_reunion_analyser",
     description:
       "Salle de réunion : analyse une transcription (texte ou audio déjà transcrit), produit le résumé, les décisions (ajoutées au registre avec leur fondement juridique) et crée automatiquement les tâches assignées aux membres cités, avec échéances.",
     parameters: {
@@ -88,7 +88,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "reunion_lister",
+    name: "memoire_reunion_lister",
     description: "Liste les réunions de l'entreprise (titre, date, statut, nombre de décisions et de tâches).",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -97,7 +97,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "reunion_ce_que_jai_manque",
+    name: "memoire_ce_que_jai_manque",
     description:
       "« Ce que j'ai manqué » : avec reunion_id, résume ce qui a été dit avant l'arrivée du membre (depuis = horodatage mm:ss, numéro de ligne ou pourcentage) ; sans reunion_id, résume ce qui s'est passé dans l'entreprise depuis une date (AAAA-MM-JJ, défaut : 7 jours).",
     parameters: { type: "object", properties: { reunion_id: { type: "string" }, depuis: { type: "string" } } },
@@ -109,7 +109,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "reunion_generer_pv",
+    name: "memoire_reunion_pv",
     description: "Génère le procès-verbal (PV) d'une réunion analysée, l'enregistre dans Documents (à faire approuver) et renvoie le lien d'export Markdown/HTML imprimable.",
     parameters: { type: "object", properties: { reunion_id: { type: "string" } }, required: ["reunion_id"] },
     async run(input, ctx) {
@@ -120,7 +120,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "score_cofounder",
+    name: "memoire_score",
     description: "Calcule le Score Co-founder (crédibilité 0–100) à partir du journal : délais tenus, engagements respectés, objectifs atteints, décisions documentées. Renvoie le détail par critère et la méthodologie.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx: ToolContext) {
@@ -129,7 +129,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "score_cofounder_attester",
+    name: "memoire_score_attester",
     description: "Émet une attestation du Score Co-founder signée en Ed25519, vérifiable publiquement sur /verifier/<id> (QR code). À utiliser quand l'utilisateur veut présenter son score à un investisseur ou partenaire.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {
@@ -141,7 +141,7 @@ export const MEMOIRE_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: "resume_vocal",
+    name: "memoire_resume_vocal",
     description: "Mode bas débit / vocal : renvoie en 3 phrases maximum la situation de l'entreprise (tâches, retards, approbations, dernière décision, score), prête à être lue à voix haute.",
     parameters: { type: "object", properties: {} },
     async run(_i, ctx) {

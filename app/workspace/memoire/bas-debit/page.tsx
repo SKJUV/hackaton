@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { LiteConsole } from "@/components/memoire/LiteConsole";
-import { LiteModeBoot } from "@/components/memoire/LiteModeBoot";
+import { LiteConsole } from "@/components/modules/memoire/LiteConsole";
+import { LiteModeBoot } from "@/components/modules/memoire/LiteModeBoot";
 
 export const metadata: Metadata = { title: "Co-founder — bas débit" };
 

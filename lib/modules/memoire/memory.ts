@@ -47,7 +47,39 @@ export function buildMemoryIndex(data: WorkspaceData, companyId: string): Memory
   for (const msg of by(data.messages)) {
     items.push({ ref: { type: "message", id: msg.id, label: `Conversation agent (${msg.role === "user" ? "question" : "réponse"})` }, date: msg.createdAt, title: msg.content.slice(0, 80), text: msg.content });
   }
+  // Données des autres modules (data.modules.<id>.<collection>) : chaque élément porte companyId (conventions).
+  for (const [moduleId, state] of Object.entries(data.modules ?? {})) {
+    if (moduleId === "memoire") continue;
+    for (const [collection, list] of Object.entries(state)) {
+      if (!Array.isArray(list)) continue;
+      for (const raw of list) {
+        const x = raw as Record<string, unknown>;
+        if (!x || x.companyId !== companyId) continue;
+        const text = flatten(x).slice(0, 4000);
+        if (!text.trim()) continue;
+        const title = String(x.title ?? x.titre ?? x.name ?? x.nom ?? x.subject ?? `${collection}`).slice(0, 120);
+        const date = String(x.updatedAt ?? x.createdAt ?? x.at ?? x.date ?? "");
+        items.push({
+          ref: { type: "module", id: String(x.id ?? `${moduleId}.${collection}`), label: `Module ${moduleId} · ${collection} « ${title} »`, module: moduleId },
+          date,
+          title,
+          text: `${title}\n${collection}\n${text}`,
+          isExample: Boolean(x.isExample),
+        });
+      }
+    }
+  }
   return items;
+}
+
+/** Texte indexable d'un objet de module : valeurs textuelles (et nombres) à plat, sans les identifiants techniques. */
+function flatten(value: unknown, depth = 0): string {
+  if (depth > 4 || value == null) return "";
+  if (typeof value === "string") return /^[a-z]+_[A-Za-z0-9_-]{6,}$/.test(value) ? "" : value;
+  if (typeof value === "number" || typeof value === "boolean") return "";
+  if (Array.isArray(value)) return value.map((v) => flatten(v, depth + 1)).filter(Boolean).join(" ");
+  if (typeof value === "object") return Object.entries(value as Record<string, unknown>).filter(([k]) => !/^(id|companyId|__)/.test(k)).map(([, v]) => flatten(v, depth + 1)).filter(Boolean).join(" ");
+  return "";
 }
 
 /** Synonymes métier : « structure juridique » ≈ « forme sociale », etc. */

@@ -1,4 +1,3 @@
-import type { ToolContext } from "@/lib/agent/tools";
 import { groundingLabel, groundQuery, type Grounding } from "@/lib/legal/grounding";
 import type { LegalSnapshot } from "./types";
 
@@ -34,20 +33,6 @@ export function toSnapshot(g: Grounding): LegalSnapshot {
 export function sourceHref(file: string, page: number): string | null {
   if (!file || !/\.pdf$/i.test(file)) return null;
   return `/api/document?file=${encodeURIComponent(file)}#page=${page}`;
-}
-
-/**
- * Équivalent local de `legalBasis()` (lib/agent/tools.ts) : recherche dans le corpus et ajoute les citations
- * au contexte de l'agent, renumérotées [S1], [S2]… Dupliqué ici pour éviter un import circulaire avec le registre.
- */
-export async function groundInCtx(ctx: ToolContext, query: string, limit = 3) {
-  const base = await groundQuery(query, limit);
-  const offset = ctx.citations.length;
-  const citations = base.citations.map((c, i) => ({ ...c, id: `S${offset + i + 1}` }));
-  ctx.citations.push(...citations);
-  const g: Grounding = { ...base, citations, sources: base.sources.map((s, i) => ({ ...s, id: `S${offset + i + 1}` })) };
-  (ctx.groundings ??= []).push(g);
-  return { ...g, label: groundingLabel(g) };
 }
 
 export function basisData(g: Grounding & { label: string }) {

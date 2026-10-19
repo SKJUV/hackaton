@@ -42,7 +42,7 @@ export async function ensureMemoireSeed(companyId: string): Promise<void> {
   if (companyId !== SEED_COMPANY) return;
   const snapshot = await readData();
   const company = snapshot.companies.find((c) => c.id === companyId);
-  if (!company?.isExample || readMemo(snapshot).seeded.includes(companyId)) return;
+  if (!company?.isExample || readMemo(snapshot).seeded.some((x) => x.companyId === companyId)) return;
 
   const meetingDate = daysAgo(14);
   const analysis = analyzeTranscriptDemo(SEED_TRANSCRIPT, PEOPLE, meetingDate);
@@ -54,8 +54,8 @@ export async function ensureMemoireSeed(companyId: string): Promise<void> {
 
   await withData((data) => {
     const m = memo(data);
-    if (m.seeded.includes(companyId)) return;
-    m.seeded.push(companyId);
+    if (m.seeded.some((x) => x.companyId === companyId)) return;
+    m.seeded.push({ id: `seed_${companyId}`, companyId });
     const t = meetingDate.toISOString();
     const meeting: Meeting = {
       id: newId("reu"),

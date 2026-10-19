@@ -22,7 +22,12 @@ export function useMemoire(companyId: string) {
   return { data, error, reload };
 }
 
-export const TAB_FOR: Record<string, string> = { document: "documents", email: "envoi", reunion: "reunion", journal: "journal", message: "agent", decision: "memoire", tache: "taches" };
+export const TAB_FOR: Record<string, string> = { document: "documents", email: "envoi", reunion: "reunions", journal: "journal", message: "agent", decision: "memoire", tache: "taches" };
+
+/** Onglet du workspace où ouvrir une source de mémoire (les données d'un module ouvrent l'onglet du module). */
+export function tabFor(ref: { type: string; module?: string }): string {
+  return ref.type === "module" && ref.module ? ref.module : TAB_FOR[ref.type] ?? "journal";
+}
 
 export function pdfHref(file: string, page: number) {
   return file && /\.pdf$/i.test(file) ? `/api/document?file=${encodeURIComponent(file)}#page=${page}` : null;

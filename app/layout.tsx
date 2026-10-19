@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Droit Cameroun — Comprendre vos droits",
+  title: "Co-founder — Co-fondateur IA ancré dans le droit camerounais",
   description:
-    "Un assistant juridique intelligent qui vous aide à comprendre les textes camerounais et à trouver les sources officielles.",
-  applicationName: "Droit.cm",
+    "Co-founder : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
+  applicationName: "Co-founder",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Droit.cm",
+    title: "Co-founder",
   },
   icons: {
     icon: "/icons/icon.svg",
@@ -43,8 +43,28 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
           rel="stylesheet"
         />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body>{children}</body>
+      <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(reg) { console.log('PWA SW registered with scope:', reg.scope); },
+                    function(err) { console.warn('PWA SW registration failed:', err); }
+                  );
+                });
+              }
+            `,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

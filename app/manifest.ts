@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Droit.cm — Assistant Juridique Cameroun",
-    short_name: "Droit.cm",
-    description: "Assistant d'information juridique intelligent pour le Cameroun basé sur les textes officiels.",
+    name: "Co-founder — Co-fondateur IA & assistant juridique",
+    short_name: "Co-founder",
+    description: "Co-founder : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0e17",

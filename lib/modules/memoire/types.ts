@@ -15,9 +15,11 @@ export type LegalSnapshot = {
 };
 
 export type SourceRef = {
-  type: "document" | "email" | "reunion" | "journal" | "message" | "decision" | "tache";
+  type: "document" | "email" | "reunion" | "journal" | "message" | "decision" | "tache" | "module";
   id: string;
   label: string;
+  /** Pour type « module » : identifiant de l'onglet du module source (data.modules.<id>). */
+  module?: string;
 };
 
 export type DecisionStatus = "proposee" | "adoptee" | "revisee" | "abandonnee";
@@ -125,6 +127,6 @@ export type MemoireData = {
   decisions: Decision[];
   meetings: Meeting[];
   attestations: Attestation[];
-  /** Entreprises de démo dont le seed mémoire a déjà été injecté. */
-  seeded: string[];
+  /** Entreprises de démo dont le seed mémoire a déjà été injecté (marqueurs { id, companyId }). */
+  seeded: { id: string; companyId: string }[];
 };

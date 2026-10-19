@@ -57,16 +57,26 @@ export type LegalSearch = {
   indexReady: boolean;
 };
 
+/** Tableaux fusionnés réutilisés tant que les sources n'ont pas changé (le cache BM25 est indexé par tableau). */
+let merged: { parts: unknown[]; official: DocumentChunk[]; withExamples: DocumentChunk[] } | null = null;
+function mergedCorpus(pdfChunks: DocumentChunk[], ingested: DocumentChunk[], examples: DocumentChunk[]) {
+  const parts = [pdfChunks, ingested, examples, pdfChunks.length, ingested.length, examples.length];
+  if (merged && merged.parts.every((p, i) => p === parts[i])) return merged;
+  const official = [...pdfChunks, ...ingested];
+  merged = { parts, official, withExamples: [...official, ...examples] };
+  return merged;
+}
+
 export async function searchLegalCorpus(question: string, limit = 5): Promise<LegalSearch> {
   const [pdfChunks, ingested, examples] = await Promise.all([
     loadDocumentChunks(),
     loadIngestedOfficial(),
     loadExampleCorpus(),
   ]);
-  const official = [...pdfChunks, ...ingested];
+  const { official, withExamples } = mergedCorpus(pdfChunks, ingested, examples);
   const officialResults: SearchResult[] = official.length ? searchDocuments(question, official, limit) : [];
   // Score comparable : on classe les exemples dans le même espace de recherche que le corpus officiel.
-  const combined = official.length ? searchDocuments(question, [...official, ...examples], limit + 3) : searchDocuments(question, examples, 2);
+  const combined = official.length ? searchDocuments(question, withExamples, limit + 3) : searchDocuments(question, examples, 2);
   const exampleIds = new Set(examples.map((e) => e.id));
   const keptExamples = combined
     .filter((r) => exampleIds.has(r.id))

@@ -9,7 +9,7 @@ import { AudioSpeakerButton } from "@/components/voice/AudioSpeakerButton";
 import type { MemoryAnswer } from "@/lib/modules/memoire/memory";
 import type { Decision, DecisionStatus } from "@/lib/modules/memoire/types";
 import { LegalSnapshotView } from "./LegalSnapshotView";
-import { TAB_FOR, useMemoire } from "./useMemoire";
+import { tabFor, useMemoire } from "./useMemoire";
 import "./memoire.css";
 
 const STATUS: Record<DecisionStatus, { label: string; tone: "accent" | "green" | "amber" | "neutral" }> = {
@@ -22,7 +22,7 @@ const STATUS: Record<DecisionStatus, { label: string; tone: "accent" | "green" |
 const EXAMPLES = ["Pourquoi avons-nous choisi cette structure juridique ?", "Qu'avons-nous décidé pour l'encaissement ?", "Qui doit rédiger les statuts ?"];
 
 /** Onglet « Mémoire & décisions » : questions-réponses sourcées + registre des décisions. */
-export function MemoireTab({ snap, memberId, notify, goTo }: TabProps) {
+export default function MemoirePanel({ snap, memberId, notify, goTo }: TabProps) {
   const { data, error, reload } = useMemoire(snap.company.id);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<MemoryAnswer | null>(null);
@@ -77,7 +77,7 @@ export function MemoireTab({ snap, memberId, notify, goTo }: TabProps) {
                 <ul className="mem-hits">
                   {answer.hits.map((h) => (
                     <li key={h.id}>
-                      <b>[{h.id}]</b> <button className="ws-link" onClick={() => goTo(TAB_FOR[h.ref.type] ?? "journal")}>{h.ref.label}</button> · {fmtDate(h.date)} {h.isExample && <ExampleBadge />}
+                      <b>[{h.id}]</b> <button className="ws-link" onClick={() => goTo(tabFor(h.ref))}>{h.ref.label}</button> · {fmtDate(h.date)} {h.isExample && <ExampleBadge />}
                       <div className="ws-muted">« {h.excerpt} »</div>
                     </li>
                   ))}
@@ -108,7 +108,7 @@ export function MemoireTab({ snap, memberId, notify, goTo }: TabProps) {
                 {d.decision !== d.title && <p>{d.decision}</p>}
                 <p><strong>Pourquoi :</strong> {d.rationale || <em>motivation non consignée</em>}</p>
                 {d.alternatives.length > 0 && <p><strong>Alternatives écartées :</strong> {d.alternatives.join(" ; ")}</p>}
-                {d.sources.length > 0 && <p className="ws-muted">Sources : {d.sources.map((s) => <button key={s.id} className="ws-link" onClick={() => goTo(TAB_FOR[s.type] ?? "journal")}>{s.label}</button>)}</p>}
+                {d.sources.length > 0 && <p className="ws-muted">Sources : {d.sources.map((s) => <button key={s.id} className="ws-link" onClick={() => goTo(tabFor(s))}>{s.label}</button>)}</p>}
                 {d.taskIds.length > 0 && <p className="ws-muted">{d.taskIds.length} tâche(s) de suivi · <button className="ws-link" onClick={() => goTo("taches")}>voir</button></p>}
                 <LegalSnapshotView legal={d.legal} />
               </article>

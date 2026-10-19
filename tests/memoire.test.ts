@@ -12,7 +12,10 @@ import { transcribeAudio } from "@/lib/modules/memoire/transcribe";
 import { memoireIntents } from "@/lib/modules/memoire/demo";
 import { detectIntents } from "@/lib/agent/demo-planner";
 import { runAgent } from "@/lib/agent/runner";
-import { TOOLS, TOOL_MAP } from "@/lib/agent/tools";
+import { ALL_TOOLS as TOOLS, DEMO_INTENTS, TOOL_MAP } from "@/lib/agent/registry";
+import { readMemo } from "@/lib/modules/memoire/store";
+import { resetDemoData, withData } from "@/lib/workspace/store";
+import { moduleState } from "@/lib/modules/state";
 import { getSnapshot } from "@/lib/workspace/service";
 import { readData } from "@/lib/workspace/store";
 import { generateKeyPairSync } from "node:crypto";
@@ -74,11 +77,11 @@ describe("module mémoire (workspace)", () => {
     await ensureMemoireSeed("co_kmerlog");
     await ensureMemoireSeed("co_kmerlog");
     const data = await readData();
-    expect(data.memoire!.meetings.filter((m) => m.companyId === "co_kmerlog")).toHaveLength(1);
+    expect(readMemo(data).meetings.filter((m) => m.companyId === "co_kmerlog")).toHaveLength(1);
     const decisions = await listDecisions("co_kmerlog");
     expect(decisions.length).toBe(3);
     expect(decisions.every((d) => d.isExample)).toBe(true);
-    const meetingTasks = data.tasks.filter((t) => data.memoire!.meetings[0].taskIds.includes(t.id));
+    const meetingTasks = data.tasks.filter((t) => readMemo(data).meetings[0].taskIds.includes(t.id));
     expect(meetingTasks).toHaveLength(3);
     expect(meetingTasks.every((t) => t.assigneeId)).toBe(true);
     // Les entreprises sans seed ne reçoivent rien.
@@ -239,7 +242,7 @@ describe("agent : outils du module", () => {
   beforeEach(useTempDb);
 
   it("outils enregistrés, uniques, avec schéma", () => {
-    for (const name of ["memoire_interroger", "registre_decisions", "enregistrer_decision", "reunion_analyser", "reunion_lister", "reunion_ce_que_jai_manque", "reunion_generer_pv", "score_cofounder", "score_cofounder_attester", "resume_vocal"]) {
+    for (const name of ["memoire_interroger", "memoire_registre_decisions", "memoire_enregistrer_decision", "memoire_reunion_analyser", "memoire_reunion_lister", "memoire_ce_que_jai_manque", "memoire_reunion_pv", "memoire_score", "memoire_score_attester", "memoire_resume_vocal"]) {
       expect(TOOL_MAP.get(name)?.parameters.type).toBe("object");
     }
     expect(new Set(TOOLS.map((t) => t.name)).size).toBe(TOOLS.length);
@@ -247,7 +250,10 @@ describe("agent : outils du module", () => {
 
   it("intentions exclusives : une transcription ne déclenche ni devis ni email", () => {
     const t = "Réunion produit\n[00:01] Paul : il faut des devis fournisseurs\n[00:02] Awa : j'envoie un mail à a@b.com";
-    expect(detectIntents(t)).toEqual(["reunion_analyse"]);
+    expect(memoireIntents(t)).toEqual(["reunion_analyse"]);
+    const norm = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const matched = DEMO_INTENTS.filter((i) => i.test.test(norm));
+    expect(matched.map((i) => [i.name, Boolean(i.exclusive)])).toEqual([["memoire_reunion", true]]);
     expect(memoireIntents("Pourquoi avons-nous choisi cette structure juridique ?")).toEqual(["memoire"]);
     expect(memoireIntents("Émets une attestation de mon score Co-founder")).toEqual(["score_attester"]);
     expect(memoireIntents("Génère le PV de la dernière réunion")).toEqual(["pv"]);
@@ -265,7 +271,7 @@ describe("agent : outils du module", () => {
   it("mode démo : transcription collée → tâches créées, aucune approbation externe", async () => {
     const { company } = await getSnapshot("co_kmerlog");
     const reply = await runAgent(company, [{ role: "user", content: `Analyse la réunion commerciale. Transcription :\n${SEED_TRANSCRIPT}` }]);
-    expect(reply.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "reunion_analyser"]);
+    expect(reply.toolTrace.map((t) => t.tool)).toEqual(["rechercher_textes_juridiques", "memoire_reunion_analyser"]);
     const snap = await getSnapshot("co_kmerlog");
     expect(snap.approvals).toHaveLength(0);
     expect(reply.answer).toMatch(/Tâches créées/);
@@ -285,5 +291,46 @@ describe("bas débit : réponse abrégée", () => {
     expect(r.text).not.toMatch(/Base juridique/);
     expect(r.text.startsWith("🧠 Mémoire")).toBe(true);
     expect(shortenAnswer("Voir p. 127, art. 34 du texte. Suite.", 200).text).toBe("Voir p. 127, art. 34 du texte. Suite.");
+  });
+});
+
+describe("conventions : moduleState, réinitialisation et données des autres modules", () => {
+  beforeEach(useTempDb);
+
+  it("les données vivent dans data.modules.memoire ; la réinitialisation conserve les vraies entreprises et ré-applique le seed", async () => {
+    await ensureMemoireSeed("co_kmerlog");
+    await withData((d) => {
+      d.companies.push({ ...d.companies.find((c) => c.id === "co_kmerlog")!, id: "co_reelle", name: "Entreprise réelle", isExample: false });
+    });
+    await recordDecision("co_reelle", { title: "Choix de la banque", decision: "Compte ouvert dans une banque locale." }, "test");
+    let data = await readData();
+    expect((data as unknown as { memoire?: unknown }).memoire).toBeUndefined();
+    expect(data.modules?.memoire).toBeDefined();
+    await resetDemoData();
+    data = await readData();
+    const m = readMemo(data);
+    expect(m.decisions.filter((d) => d.companyId === "co_reelle")).toHaveLength(1);
+    expect(m.decisions.filter((d) => d.companyId === "co_kmerlog")).toHaveLength(0);
+    await ensureMemoireSeed("co_kmerlog");
+    expect((await listDecisions("co_kmerlog")).length).toBe(3);
+  });
+
+  it("la mémoire indexe aussi les collections des autres modules (ex. choix de structure)", async () => {
+    await withData((d) => {
+      moduleState(d, "structure_test", () => ({ choices: [] as { id: string; companyId: string; title: string; motif: string }[] })).choices.push({ id: "stc_test01", companyId: "co_kmerlog", title: "Choix de forme : SAS", motif: "entrée d'investisseurs prévue" });
+    });
+    const items = buildMemoryIndex(await readData(), "co_kmerlog");
+    const hit = searchMemory(items, "pourquoi investisseurs SAS")[0];
+    expect(hit.ref).toMatchObject({ type: "module", module: "structure_test", id: "stc_test01" });
+    expect(buildMemoryIndex(await readData(), "co_afritel").some((i) => i.ref.id === "stc_test01")).toBe(false);
+  });
+
+  it("mode démo : « PV de la réunion » est exclusif (pas de PV d'assemblée générale du cœur)", async () => {
+    await ensureMemoireSeed("co_kmerlog");
+    const { company } = await getSnapshot("co_kmerlog");
+    const reply = await runAgent(company, [{ role: "user", content: "Génère le PV de la dernière réunion" }]);
+    const tools = reply.toolTrace.map((t) => t.tool);
+    expect(tools).toContain("memoire_reunion_pv");
+    expect(tools).not.toContain("generer_document_juridique");
   });
 });

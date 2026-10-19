@@ -15,7 +15,7 @@ const LEVEL: Record<string, { label: string; tone: "rose" | "amber" | "accent" |
 };
 
 /** Onglet « Score Co-founder » : calcul transparent, attestations signées Ed25519, vérification publique. */
-export function ScoreTab({ snap, memberId, notify }: TabProps) {
+export default function ScorePanel({ snap, memberId, notify }: TabProps) {
   const { data, error, reload } = useMemoire(snap.company.id);
   const [busy, setBusy] = useState(false);
   if (error) return <Card title="Score Co-founder"><p>{error}</p></Card>;

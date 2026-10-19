@@ -1,4 +1,4 @@
-// Droit.cm Service Worker
+// Co-founder Service Worker
 const CACHE_NAME = "droit-cm-v2";
 const STATIC_ASSETS = [
   "/",

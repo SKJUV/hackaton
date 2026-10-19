@@ -16,8 +16,8 @@ export function memoireIntents(message: string): string[] | null {
   if (/enregistre(r|z)? (la |une |cette |notre )?decision|consigne(r|z)? (la |une |cette )?decision|note(r|z)? (la |une |cette )?decision/.test(m)) return ["decision"];
   if (/registre des decisions|liste des decisions|nos decisions|decisions prises/.test(m)) return ["registre"];
   if (/score co-?founder|score de credibilite|credibilite|track record/.test(m) || (/\bscore\b/.test(m) && /attestation|signe|verifiable|qr/.test(m)))
-    return /attestation|signe|certifi|verifiable|qr|investisseur|partenaire/.test(m) ? ["score_attester"] : ["score_cofounder"];
-  if (/resume vocal|en bref|version courte|bas debit|lis-moi|lecture vocale/.test(m)) return ["resume_vocal"];
+    return /attestation|signe|certifi|verifiable|qr|investisseur|partenaire/.test(m) ? ["score_attester"] : ["memoire_score"];
+  if (/resume vocal|en bref|version courte|bas debit|lis-moi|lecture vocale/.test(m)) return ["memoire_resume_vocal"];
   if (/pourquoi (avons|a-t-on|on a|nous avons|avions|avoir)|memoire|historique|qu.avons-nous decide|qu.a-t-on decide|qui a decide|quand avons-nous/.test(m)) return ["memoire"];
   if (/\breunions?\b/.test(m)) return ["reunions"];
   return null;
@@ -36,7 +36,7 @@ export async function runMemoireIntent(intent: string, ctx: { company: Company; 
       return true;
     }
     case "registre": {
-      const r = await call("registre_decisions", {});
+      const r = await call("memoire_registre_decisions", {});
       const list = (r?.data as { titre: string; statut: string; date: string; fondement: string }[]) ?? [];
       if (r) lines.push(`📚 **Registre des décisions** — ${r.summary} :\n${list.map((x) => `- ${x.date} · ${x.titre} (${x.statut}) — ${x.fondement}`).join("\n")}`);
       return true;
@@ -44,14 +44,14 @@ export async function runMemoireIntent(intent: string, ctx: { company: Company; 
     case "decision": {
       const body = message.replace(/^.*?decision\s*:?\s*/i, "").replace(/^.*?décision\s*:?\s*/i, "").trim() || message;
       const [titre, raisons] = body.split(/\s+(?:car|parce que|parce qu['’])\s+/i);
-      const r = await call("enregistrer_decision", { titre: titre.slice(0, 160), decision: titre, raisons: raisons ?? "" });
-      if (r) lines.push(`📝 ${r.summary}. Retrouvez-la dans l'onglet **Mémoire & décisions**.`);
+      const r = await call("memoire_enregistrer_decision", { titre: titre.slice(0, 160), decision: titre, raisons: raisons ?? "" });
+      if (r) lines.push(`📝 ${r.summary}. Retrouvez-la dans l'onglet **Mémoire**.`);
       return true;
     }
     case "reunion_analyse": {
       const transcript = message.replace(/^[\s\S]*?transcription\s*:\s*/i, "").trim();
       const titre = message.match(/r[ée]union\s+(?:de |du |d['’]|sur )?([^\n:]{3,60})/i)?.[1]?.trim() ?? `Réunion du ${new Date().toISOString().slice(0, 10)}`;
-      const r = await call("reunion_analyser", { titre, transcription: transcript });
+      const r = await call("memoire_reunion_analyser", { titre, transcription: transcript });
       const d = r?.data as { resume: string; decisions: string[]; taches: { titre: string; responsable: string; echeance: string | null }[] } | undefined;
       if (r && d)
         lines.push(
@@ -60,43 +60,43 @@ export async function runMemoireIntent(intent: string, ctx: { company: Company; 
       return true;
     }
     case "reunions": {
-      const r = await call("reunion_lister", {});
+      const r = await call("memoire_reunion_lister", {});
       const list = (r?.data as { titre: string; date: string; statut: string; decisions: number; taches: number }[]) ?? [];
       if (r) lines.push(`🗓️ ${r.summary} :\n${list.map((x) => `- ${x.date} · ${x.titre} (${x.statut}) — ${x.decisions} décision(s), ${x.taches} tâche(s)`).join("\n") || "Aucune réunion."}`);
       return true;
     }
     case "manque": {
-      const r = await call("reunion_ce_que_jai_manque", {});
+      const r = await call("memoire_ce_que_jai_manque", {});
       const d = r?.data as { decisions: string[]; actions: { title: string; assignee?: string }[] } | undefined;
       if (r && d) lines.push(`⏪ **Ce que vous avez manqué** — ${r.summary}${d.decisions.length ? `\n- Décisions : ${d.decisions.join(" ; ")}` : ""}${d.actions.length ? `\n- Tâches : ${d.actions.map((a) => `${a.title}${a.assignee ? ` (${a.assignee})` : ""}`).join(" ; ")}` : ""}`);
       return true;
     }
     case "pv": {
-      const list = await call("reunion_lister", {});
+      const list = await call("memoire_reunion_lister", {});
       const last = ((list?.data as { id: string; statut: string }[]) ?? []).find((x) => x.statut === "terminee");
       if (!last) {
         lines.push("Aucune réunion analysée : collez d'abord la transcription ou utilisez l'onglet **Salle de réunion**.");
         return true;
       }
-      const r = await call("reunion_generer_pv", { reunion_id: last.id });
+      const r = await call("memoire_reunion_pv", { reunion_id: last.id });
       const d = r?.data as { export_markdown: string } | undefined;
       if (r) lines.push(`📄 ${r.summary}. Export : ${d?.export_markdown}`);
       return true;
     }
-    case "score_cofounder": {
-      const r = await call("score_cofounder", {});
+    case "memoire_score": {
+      const r = await call("memoire_score", {});
       const comps = ((r?.data as { components?: { label: string; score: number | null; explanation: string }[] })?.components ?? []);
-      if (r) lines.push(`🏅 **${r.summary}**\n${comps.map((c) => `- ${c.label} : ${c.score === null ? "pas encore de données" : `${c.score}/100`} — ${c.explanation}`).join("\n")}\nMéthodologie détaillée dans l'onglet **Score Co-founder**.`);
+      if (r) lines.push(`🏅 **${r.summary}**\n${comps.map((c) => `- ${c.label} : ${c.score === null ? "pas encore de données" : `${c.score}/100`} — ${c.explanation}`).join("\n")}\nMéthodologie détaillée dans l'onglet **Score de crédibilité**.`);
       return true;
     }
     case "score_attester": {
-      const r = await call("score_cofounder_attester", {});
+      const r = await call("memoire_score_attester", {});
       const d = r?.data as { attestationId: string; url_verification: string; demo: boolean } | undefined;
       if (r && d) lines.push(`🔏 ${r.summary}. Lien public : ${d.url_verification}${d.demo ? "\n⚠️ Attestation de démonstration (entreprise de démo ou clé de développement)." : ""}`);
       return true;
     }
-    case "resume_vocal": {
-      const r = await call("resume_vocal", {});
+    case "memoire_resume_vocal": {
+      const r = await call("memoire_resume_vocal", {});
       const d = r?.data as { texte: string } | undefined;
       if (d) lines.push(`🔊 ${d.texte}`);
       return true;

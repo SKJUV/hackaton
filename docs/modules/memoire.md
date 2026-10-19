@@ -65,15 +65,15 @@ vérifiable et signé ») du dossier produit. Tout le module est dans l'offre pa
 | Outil | Action |
 |---|---|
 | `memoire_interroger` | Q/R sur la mémoire, éléments `[Mx]` + textes figés |
-| `registre_decisions` | Liste / filtre le registre |
-| `enregistrer_decision` | Ajoute une décision (recherche juridique + instantané) |
-| `reunion_analyser` | Analyse une transcription, décisions + tâches assignées |
-| `reunion_lister` | Réunions |
-| `reunion_ce_que_jai_manque` | Résumé de ce qui a été manqué |
-| `reunion_generer_pv` | PV dans Documents + liens d'export |
-| `score_cofounder` | Score + détail + méthodologie |
-| `score_cofounder_attester` | Attestation signée + lien `/verifier/<id>` |
-| `resume_vocal` | Situation en 3 phrases (bas débit / voix) |
+| `memoire_registre_decisions` | Liste / filtre le registre |
+| `memoire_enregistrer_decision` | Ajoute une décision (recherche juridique + instantané) |
+| `memoire_reunion_analyser` | Analyse une transcription, décisions + tâches assignées |
+| `memoire_reunion_lister` | Réunions |
+| `memoire_ce_que_jai_manque` | Résumé de ce qui a été manqué |
+| `memoire_reunion_pv` | PV dans Documents + liens d'export |
+| `memoire_score` | Score + détail + méthodologie |
+| `memoire_score_attester` | Attestation signée + lien `/verifier/<id>` |
+| `memoire_resume_vocal` | Situation en 3 phrases (bas débit / voix) |
 
 Planificateur démo : intentions **exclusives** (`demo.ts`) — une transcription collée contenant « devis » ou une
 adresse email ne déclenche ni demande de devis ni email. La recherche juridique préalable reste exécutée en premier.
@@ -89,21 +89,43 @@ Contrôle d'appartenance : toutes les routes vérifient l'entreprise (ou l'objet
 
 ## Données
 
-`WorkspaceData.memoire` (optionnel, aucune migration de version) : `decisions`, `meetings`, `attestations`, `seeded`.
-Seed de démo (`seed.ts`) injecté une fois pour « Kmer Logistik (démo) » : réunion de lancement, 3 décisions et
-historique d'exécution **fictifs**, tous marqués exemple ; références juridiques recherchées dans le corpus au moment du seed.
-`resetDemoData` conserve les données des entreprises réelles et les attestations publiées.
+`moduleState(data, "memoire", …)` (conventions) → `data.modules.memoire` : `decisions`, `meetings`, `attestations`,
+`seeded` (marqueurs). `WorkspaceData` n'est pas modifié. Chaque élément porte `companyId`.
+Seed de démo (`seed.ts`, `ensureMemoireSeed`) injecté une fois pour « Kmer Logistik (démo) » (co_kmerlog) : réunion de
+lancement, 3 décisions et historique d'exécution **fictifs**, tous `isExample` ; références juridiques recherchées dans
+le corpus au moment du seed (d'où un seed asynchrone, et non dans la fonction `seed()` de moduleState).
+« Réinitialiser la démo » (`resetModuleStates`) conserve les données des entreprises réelles, efface celles des
+entreprises de démo (y compris leurs attestations publiées) puis ré-applique le seed.
 
-## Fichiers partagés modifiés (ajouts en fin de liste)
+La mémoire indexe aussi **les collections des autres modules** (`data.modules.<id>.<collection>`, éléments de la même
+entreprise) : un choix de forme juridique du module structure, un dossier de financement… y sont retrouvés, avec un
+lien vers l'onglet du module.
 
-`lib/agent/tools.ts` (`...MEMOIRE_TOOLS`), `lib/agent/demo-planner.ts` (intentions + `default`),
-`lib/agent/runner.ts` (1 ligne de consigne), `lib/workspace/types.ts` (champ `memoire?`), `lib/workspace/store.ts`
-(réinitialisation), `app/workspace/page.tsx` (4 onglets), `app/workspace/layout.tsx` (`LiteModeBoot`),
-`components/workspace/AgentPanel.tsx` (libellés, 2 suggestions), `public/sw.js` (cache hors ligne), `.env.example`,
-`.gitignore`, `package.json` (`qrcode`).
+## Intégration (conventions.md)
+
+- Code : `lib/modules/memoire/` ; agent : `lib/modules/memoire/agent.ts` (`agentModule`, outils préfixés `memoire_`).
+- UI : `components/modules/memoire/` — `MemoirePanel` (onglet `memoire`), `ReunionsPanel` (`reunions`),
+  `ScorePanel` (`score`), `BasDebitPanel` (`bas-debit`), exports par défaut recevant `TabProps`.
+- Intentions démo : deux `DemoIntent`. `memoire_reunion` (transcription collée, « PV de la réunion ») est
+  **exclusive** : une transcription contenant « devis », « email » ou « statuts » ne déclenche ni demande de devis,
+  ni email, ni document du cœur. Les autres intentions (mémoire, registre, score, ce que j'ai manqué, résumé vocal)
+  s'ajoutent à la réponse du cœur.
+
+## Fichiers partagés modifiés (une ligne par entrée, en fin de liste)
+
+- `lib/agent/registry.ts` : import + entrée `memoire` en fin de MODULES ; champ optionnel `exclusive?: boolean` dans
+  `DemoIntent` (mécanisme générique, utilisable par les autres modules).
+- `lib/agent/demo-planner.ts` : prise en compte de `exclusive` (3 lignes).
+- `components/workspace/module-slots.tsx` : 4 lignes (`memoire`, `reunions`, `score`, `bas-debit`).
+- `components/workspace/module-catalog.tsx` : 1 ligne en fin de NAV (`bas-debit`, niveau Pilotage).
+- `app/workspace/layout.tsx` : `LiteModeBoot` (mode allégé global, attribut `data-lite`).
+- `public/sw.js` : cache v2, page bas débit disponible hors ligne (network-first + mise en cache), `/_next/static/`
+  en cache-first, correction du repli de navigation.
+- `.env.example` (bloc « Module memoire » en fin de fichier), `.gitignore` (`data/*.pem`), `package.json` (`qrcode`, `@types/qrcode`).
 
 ## Tests
 
 `tests/memoire.test.ts` : analyse de transcription, échéances, seed, Q/R « Pourquoi avons-nous choisi cette structure
 juridique ? », LLM simulé, réunion en direct → tâches → PV, « ce que j'ai manqué », score, signature (clé dev, clé env,
-falsification, mauvaise clé, révocation), bas débit, transcription Groq simulée, outils et intentions de l'agent.
+falsification, mauvaise clé, révocation), bas débit, transcription Groq simulée, outils et intentions de l'agent
+(registre, exclusivité), moduleState + réinitialisation de la démo, indexation des autres modules.

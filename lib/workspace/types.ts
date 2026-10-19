@@ -123,7 +123,7 @@ export type Email = {
   sentAt?: string;
 };
 
-export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur";
+export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur" | "action_connecteur";
 export type ApprovalStatus = "en_attente" | "approuvee" | "rejetee";
 export type Approval = {
   id: string;
@@ -139,6 +139,8 @@ export type Approval = {
   decisionNote?: string;
   decidedAt?: string;
   createdAt: string;
+  /** Module mcp : appel d'outil externe (MCP ou API native) exécuté à la validation (emailId vide). */
+  action?: import("@/lib/modules/mcp/types").ConnectorAction;
 };
 
 export type ActivityEntry = {
@@ -276,4 +278,6 @@ export type WorkspaceData = {
   loginCodes: LoginCode[];
   systemEmails: SystemEmail[];
   subscriptions: Subscription[];
+  /** Module mcp-connecteurs (connecteurs, journal d'appels, boîte unifiée, jetons du serveur MCP). */
+  mcp?: import("@/lib/modules/mcp/types").McpData;
 };

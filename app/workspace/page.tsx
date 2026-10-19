@@ -20,6 +20,8 @@ import {
   Truck,
   Users,
   X,
+  Plug,
+  MessagesSquare,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AgentPanel } from "@/components/workspace/AgentPanel";
@@ -41,6 +43,8 @@ import {
 import { api, Badge } from "@/components/workspace/ui";
 import { Paywall } from "@/components/workspace/Paywall";
 import { StudioTab } from "@/components/studio/StudioTab";
+import { ConnectorsTab } from "@/components/modules/mcp/ConnectorsTab";
+import { InboxTab } from "@/components/modules/mcp/InboxTab";
 import { getMe, type Me } from "@/components/auth/client";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { Snapshot } from "@/lib/workspace/service";
@@ -60,6 +64,8 @@ const TABS = [
   { id: "taches", label: "Tâches", icon: ListTodo },
   { id: "equipe", label: "Équipe", icon: Users },
   { id: "journal", label: "Journal d'audit", icon: Activity },
+  { id: "boite", label: "Boîte unifiée", icon: MessagesSquare },
+  { id: "connecteurs", label: "Connecteurs", icon: Plug },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -92,6 +98,8 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     const saved = localStorage.getItem("ws-company") ?? undefined;
+    const onglet = new URLSearchParams(window.location.search).get("onglet");
+    if (onglet && TABS.some((t) => t.id === onglet)) setTab(onglet as TabId);
     setCompanyId(saved);
     void getMe().then((m) => {
       setMe(m);
@@ -196,6 +204,8 @@ export default function WorkspacePage() {
           {tab === "taches" && <Tasks {...props} />}
           {tab === "equipe" && <Team {...props} />}
           {tab === "journal" && <Journal {...props} />}
+          {tab === "boite" && <InboxTab {...props} />}
+          {tab === "connecteurs" && <ConnectorsTab {...props} />}
         </div>
       </main>
 

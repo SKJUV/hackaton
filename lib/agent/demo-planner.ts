@@ -33,6 +33,8 @@ const INTENTS: Intent[] = [
   { name: "tache", test: /\b(rappel|rappelle|tache|n.oublie)\b/ },
   { name: "briefing", test: /\b(briefing|ou en est|ou en sommes|priorites?|resume de la situation)\b/ },
   { name: "juridique", test: /\b(loi|article|licence|autorisation|regime|droit|obligatoire|legal|agrement|homologation|concession|sanction|decret)\b/ },
+  { name: "boite", test: /\b(boite (de reception|unifiee)|inbox|e-?mails? recus|messages? recus|whatsapp|non lus?|repondre aux (messages|emails|clients))\b/ },
+  { name: "connecteurs", test: /\b(connecteurs?|mcp|integrations?)\b/ },
 ];
 
 export function detectIntents(message: string): string[] {
@@ -40,6 +42,7 @@ export function detectIntents(message: string): string[] {
   const m = norm(message).replace(/fournisseurs? (d.acces|de services?)( a)?( internet)?/g, "activite reglementee");
   const found = INTENTS.filter((i) => i.test.test(m)).map((i) => i.name);
   if (found.includes("relance")) return ["relance", ...found.filter((f) => f !== "relance" && f !== "devis" && f !== "email")];
+  if (found.includes("boite")) return found.filter((f) => f !== "email" && f !== "juridique");
   if (found.includes("devis")) return found.filter((f) => f !== "email");
   return found.length ? found : ["juridique"];
 }
@@ -223,6 +226,17 @@ export async function runDemoPlanner(company: Company, message: string) {
         const r = await call("briefing_cofondateur", {});
         const d = r?.data as { approbations_en_attente: string[]; prochaines_demarches: string[]; recommandations: string[] } | undefined;
         if (d) lines.push(`☀️ ${r!.summary}\n- Approbations : ${d.approbations_en_attente.length ? d.approbations_en_attente.join(" ; ") : "aucune"}\n- Prochaines démarches : ${d.prochaines_demarches.join(" ; ") || "—"}\n${d.recommandations.map((x) => `- ${x}`).join("\n")}`);
+        break;
+      }
+      case "boite": {
+        const r = await call("boite_unifiee", {});
+        const msgs = ((r?.data as { de: string; objet?: string; extrait: string; priorite: string; categorie: string; routine?: string; exemple: boolean }[]) ?? []).slice(0, 5);
+        if (r) lines.push(`📥 ${r.summary} :\n${msgs.map((m) => `- [${m.priorite}] ${m.de} — ${m.objet ?? m.extrait.slice(0, 60)} (${m.categorie}${m.routine ? `, action suggérée : ${m.routine.replace(/_/g, " ")}` : ""})${m.exemple ? " — exemple" : ""}`).join("\n")}\nOuvrez l'onglet **Boîte unifiée** pour valider les réponses suggérées (envoi après approbation).`);
+        break;
+      }
+      case "connecteurs": {
+        const r = await call("lister_connecteurs", {});
+        if (r) lines.push(`🔌 ${r.summary}. Gérez-les dans l'onglet **Connecteurs** (MCP, Gmail, Outlook, WhatsApp, Slack, Notion, HubSpot).`);
         break;
       }
       case "juridique":

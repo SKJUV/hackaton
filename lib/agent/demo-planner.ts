@@ -134,7 +134,9 @@ export async function runDemoPlanner(company: Company, message: string) {
   const cov = (legal?.data as { couverture?: { statut: string; libelle: string } } | undefined)?.couverture;
   const official = ctx.citations.filter((c) => !c.isExample);
   const examples = ctx.citations.filter((c) => c.isExample);
-  const intents = detectIntents(message);
+  // Une intention de module « exclusive » (ex. transcription de réunion collée) remplace les intentions du cœur.
+  const exclusive = DEMO_INTENTS.some((i) => i.exclusive && i.test.test(norm(message)));
+  const intents = exclusive ? [] : detectIntents(message);
   const legalOnly = intents.length === 1 && intents[0] === "juridique";
   if (!cov || cov.statut === "non_couvert" || !official.length) {
     lines.push(
@@ -259,7 +261,7 @@ export async function runDemoPlanner(company: Company, message: string) {
   const normalized = norm(message);
   const skipped = new Set(INTENT_ARBITRATION.filter((r) => r.when.test(normalized)).flatMap((r) => r.skip));
   for (const intent of DEMO_INTENTS) {
-    if (skipped.has(intent.name) || !intent.test.test(normalized)) continue;
+    if (skipped.has(intent.name) || !intent.test.test(normalized) || (exclusive && !intent.exclusive)) continue;
     try {
       const line = await intent.run({ company, message, call, ctx });
       if (line) lines.push(line);

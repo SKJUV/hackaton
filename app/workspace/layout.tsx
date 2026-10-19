@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../(compte)/compte.css";
 import "./workspace.css";
+import { LiteModeBoot } from "@/components/modules/memoire/LiteModeBoot";
 
 export const metadata: Metadata = {
   title: "Workspace — Co-founder",
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <LiteModeBoot />
+      {children}
+    </>
+  );
 }

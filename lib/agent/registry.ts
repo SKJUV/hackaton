@@ -18,6 +18,8 @@ export type DemoCall = (name: string, input: Record<string, unknown>) => Promise
 export type DemoIntent = {
   name: string;
   test: RegExp;
+  /** true : quand elle est détectée, seules les intentions exclusives s'exécutent (pas celles du cœur ni des autres modules). */
+  exclusive?: boolean;
   /** Appelle les outils via `call` et renvoie le paragraphe de réponse (Markdown) ou null. */
   run: (args: { company: Company; message: string; call: DemoCall; ctx: ToolContext }) => Promise<string | null>;
 };
@@ -35,6 +37,7 @@ import { mentorModule as mentor } from "@/lib/modules/entrepreneur/agent";
 import { marketModule as market } from "@/lib/modules/entrepreneur/agent";
 import { agentModule as etat } from "@/lib/modules/etat/agent";
 import { agentModule as entreprise } from "@/lib/modules/entreprise/agent";
+import { agentModule as memoire } from "@/lib/modules/memoire/agent";
 
 const MODULES: AgentModule[] = [
   { id: "core", tools: CORE_TOOLS },
@@ -49,6 +52,7 @@ const MODULES: AgentModule[] = [
   market,
   etat,
   entreprise,
+  memoire,
 ];
 
 export const AGENT_MODULES = MODULES;

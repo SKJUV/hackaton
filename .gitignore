@@ -16,3 +16,4 @@ data/corpus-officiel.json
 .vercel
 .env*
 !.env.example
+data/*.pem

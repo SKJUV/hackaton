@@ -84,5 +84,6 @@ export const NAV: NavEntry[] = [
   // ── Connecteurs
   { id: "connecteurs", label: "Connecteurs MCP", icon: Plug, level: "connecteurs", kind: "module", team: "mcp-connecteurs", description: "Connexions réelles (MCP, API officielles) avec bascule démo." },
   // ↓ nouveaux onglets : une ligne par entrée, ajoutée en fin de liste
+  { id: "bas-debit", label: "Bas débit & vocal", icon: Mic, level: "general", kind: "module", team: "memoire", description: "Interface allégée, réponses courtes, file hors ligne, dictée et lecture vocale." },
 ];
 

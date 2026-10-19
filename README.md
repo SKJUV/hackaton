@@ -51,6 +51,12 @@ Autres commandes : `npm test` (vitest), `npm run typecheck`, `npm run build`,
 | **Conformité & calendrier** | Score 0–100 (démarches 50 pts, obligations 30 pts, documents 20 pts) + recommandations ; obligations avec retard, rappels automatiques vers les tâches. |
 | **Veille réglementaire** | Croise les mots-clés du secteur de l'entreprise avec le corpus officiel ; les nouveaux textes déposés par l'État remontent en priorité. |
 | **Workspace multi-entreprise** | Plusieurs entreprises, membres et rôles, journal d'audit de toutes les actions (agent et humains). |
+| **Structure & création** (Entrepreneur) | Choix guidé de la forme juridique (EI, SARL, SARLU, SAS, SASU, SA, GIE, SNC), simulateur de création comparatif, **pacte d'associés avec vesting** (cliff, good/bad leaver, préemption, lock-up, drag/tag-along), guide d'immatriculation avec tâches. Détails : `docs/modules/structure.md`. |
+| **Feu vert juridique** | Chaque carte d'approbation affiche un contrôle informatif 🟢 fondé / 🟠 partiel / ⚪ non couvert, avec les sources officielles. Jamais bloquant. |
+| **Alerte de changement de loi** (Veille) | Les documents générés mémorisent l'empreinte des textes qui les fondent ; après une ré-ingestion du corpus, les documents impactés passent « à revoir » avec une mise à jour proposée du fondement (plus une simulation démo). Détails : `docs/modules/feu-vert-et-alerte-loi.md`. |
+
+### Navigation par niveau
+Le workspace est organisé en **Pilotage · Entrepreneur · Entreprise · État (démo) · Connecteurs**. Chaque module des équipes parallèles a déjà son entrée. Un module pas encore livré affiche « En construction » avec le nom de l'équipe responsable. Les conventions pour brancher un module (dossiers, une ligne dans `module-slots.tsx`, deux lignes dans `lib/agent/registry.ts`, `moduleState`, `proposeExternalMessage`, ancrage juridique) sont dans `docs/CONVENTIONS_MODULES.md`.
 
 ## Ancrage juridique (priorité du co-fondateur)
 
@@ -105,6 +111,9 @@ Sessions : cookie HttpOnly signé HMAC-SHA256 avec `AUTH_SECRET` (défaut de dé
 | Codes de connexion / liens magiques | Réels (usage unique, 30 min) ; l'email est simulé en `MAIL_MODE=simulation` |
 | Comptes « (démo) » et abonnement de Freddy (démo) | Seed |
 | Paiement | Simulé par défaut ; prestataires réels activables par variables d'env (non testés) |
+| Formes juridiques (module Structure) | **Repères généraux à confirmer** : l'Acte uniforme OHADA n'est pas dans le corpus. Coûts et délais = **exemples** |
+| Pacte d'associés, guide d'immatriculation | Trames générées, marquées « exemple » / « à relire », avec fondement juridique sourcé |
+| Alerte de changement de loi | **Réelle** (empreinte sha256 du corpus) ; le bouton « Simuler un changement » est une **démo** |
 
 ## Variables d'environnement
 

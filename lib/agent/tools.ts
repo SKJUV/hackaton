@@ -23,7 +23,7 @@ import {
 } from "@/lib/workspace/service";
 import type { StepStatus } from "@/lib/workspace/types";
 
-export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[] };
+export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[]; /** Outils découverts dynamiquement (connecteurs MCP / natifs). */ extraTools?: AgentTool[] };
 export type ToolResult = { summary: string; data: unknown };
 type JsonSchema = { type: "object"; properties: Record<string, unknown>; required?: string[] };
 export type AgentTool = {

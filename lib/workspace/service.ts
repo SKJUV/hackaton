@@ -236,6 +236,8 @@ export async function draftEmail(
 
 /** Valide ou rejette une action externe. L'envoi n'a lieu qu'ici. */
 export async function decideApproval(approvalId: string, decision: "approuver" | "rejeter", decidedBy: string, note?: string) {
+  // Module connecteurs : action de connecteur (MCP / API native) exécutée à la validation.
+  if ((await readData()).approvals.find((a) => a.id === approvalId)?.type === "connecteurs_action") return (await import("@/lib/modules/mcp/connectors")).decideConnectorApproval(approvalId, decision, decidedBy, note);
   // Phase 1 : verrouiller la décision.
   const pending = await withData((data) => {
     const approval = data.approvals.find((a) => a.id === approvalId);

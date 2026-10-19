@@ -14,4 +14,6 @@ const load = (loader: () => Promise<{ default: ComponentType<TabProps> }>) => dy
 export const MODULE_SLOTS: Record<string, ComponentType<TabProps>> = {
   structure: load(() => import("@/components/modules/structure/StructurePanel")),
   // ↓ modules : une ligne par module, ajoutée en fin de liste
+  connecteurs: load(() => import("@/components/modules/mcp/ConnectorsPanel")),
+  comms: load(() => import("@/components/modules/mcp/CommsPanel")),
 };

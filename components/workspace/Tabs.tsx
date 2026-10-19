@@ -8,6 +8,7 @@ import type { Snapshot } from "@/lib/workspace/service";
 import type { WatchAlert } from "@/lib/compliance";
 import { LawChangeCard } from "@/components/modules/law-watch/LawChangeCard";
 import { api, Badge, Card, Empty, ExampleBadge, fmtDate, fmtMoney, Markdown, StatusBadge } from "./ui";
+import { ApprovalAction } from "@/components/modules/mcp/ApprovalAction";
 
 export type TabProps = {
   snap: Snapshot;
@@ -95,7 +96,7 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
   const pending = snap.approvals.filter((a) => a.status === "en_attente");
   const done = snap.approvals.filter((a) => a.status !== "en_attente");
   const decide = (id: string, decision: "approuver" | "rejeter") =>
-    run(id, () => api(`/api/workspace/approvals/${id}`, "POST", { decision, memberId, note: notes[id] }), decision === "approuver" ? (snap.mail.mode === "simulation" ? "Validé — email envoyé en simulation" : "Validé — email envoyé") : "Rejeté");
+    run(id, () => api(`/api/workspace/approvals/${id}`, "POST", { decision, memberId, note: notes[id] }), decision === "approuver" ? (snap.approvals.find((x) => x.id === id)?.type === "connecteurs_action" ? "Validé — action de connecteur exécutée (voir le journal)" : snap.mail.mode === "simulation" ? "Validé — email envoyé en simulation" : "Validé — email envoyé") : "Rejeté");
   return (
     <div className="ws-stack">
       <div className="ws-info">
@@ -115,6 +116,7 @@ export function Approvals({ snap, memberId, refresh, notify }: TabProps) {
                 <pre>{email.body}</pre>
               </div>
             )}
+            {a.type === "connecteurs_action" && <ApprovalAction summary={a.summary} />}
             <div className="ws-approve-bar">
               <input placeholder="Note (optionnelle)" value={notes[a.id] ?? ""} onChange={(e) => setNotes({ ...notes, [a.id]: e.target.value })} />
               <button className="ws-btn ws-btn-ghost" disabled={busy === a.id} onClick={() => void decide(a.id, "rejeter")}><X size={15} /> Rejeter</button>

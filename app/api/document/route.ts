@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const allowedRoots = ["reglementation", "publications"].map((folder) =>
+const allowedRoots = ["reglementation", "publications", "corpus/officiel"].map((folder) =>
   path.resolve(process.cwd(), folder),
 );
 
@@ -38,6 +38,11 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (process.env.VERCEL) {
+        // Sur Vercel, les PDF sont servis en statique depuis public/sources/.
+        const relative = path.relative(process.cwd(), resolved).split(path.sep).map(encodeURIComponent).join("/");
+        return NextResponse.redirect(new URL(`/sources/${relative}`, request.url), 307);
+      }
       return NextResponse.json({ error: "Ce document n’est plus disponible." }, { status: 404 });
     }
     console.error("Could not open source document:", error);

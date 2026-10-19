@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Droit Cameroun — Comprendre vos droits",
+  title: "Co-founder — Co-fondateur IA ancré dans le droit camerounais",
   description:
-    "Un assistant juridique intelligent qui vous aide à comprendre les textes camerounais et à trouver les sources officielles.",
-  applicationName: "Droit.cm",
+    "Co-founder : co-fondateur IA ancré dans les textes officiels camerounais (assistant juridique gratuit, workspace entrepreneur, entreprise et État).",
+  applicationName: "Co-founder",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Droit.cm",
+    title: "Co-founder",
   },
   icons: {
     icon: "/icons/icon.svg",

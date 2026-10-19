@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { loadDocumentChunks } from "@/lib/documents";
 
 export const runtime = "nodejs";
 
@@ -50,22 +51,24 @@ type EgovaDocument = {
 let cachedDb: { documents: EgovaDocument[] } | null = null;
 let cachedArticles: EgovaArticle[] | null = null;
 
+async function readOptional<T>(file: string, fallback: T): Promise<T> {
+  try {
+    return JSON.parse(await readFile(path.join(process.cwd(), "data", file), "utf8")) as T;
+  } catch (error) {
+    // Les bases eGova sont générées hors dépôt (gitignore) : absentes sur un clone neuf.
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return fallback;
+    throw error;
+  }
+}
+
 async function loadEgovaData() {
   if (!cachedDb) {
-    const dbRaw = await readFile(
-      path.join(process.cwd(), "data", "base_de_donnees_reglementation.json"),
-      "utf8",
-    );
-    cachedDb = JSON.parse(dbRaw);
+    cachedDb = await readOptional<{ documents: EgovaDocument[] }>("base_de_donnees_reglementation.json", { documents: [] });
   }
   if (!cachedArticles) {
-    const artRaw = await readFile(
-      path.join(process.cwd(), "data", "reglementation_articles_index.json"),
-      "utf8",
-    );
-    cachedArticles = JSON.parse(artRaw);
+    cachedArticles = await readOptional<EgovaArticle[]>("reglementation_articles_index.json", []);
   }
-  return { db: cachedDb!, articles: cachedArticles! };
+  return { db: cachedDb, articles: cachedArticles };
 }
 
 export async function GET(request: Request) {
@@ -118,6 +121,33 @@ export async function GET(request: Request) {
           extrait: a.contenu_extrait,
         })),
       });
+    }
+
+    // 1 bis. Repli : bases eGova absentes (déploiement) → fiche minimale depuis l'index du corpus.
+    if (file && db.documents.length === 0) {
+      const chunks = (await loadDocumentChunks()).filter((c) => c.source === file);
+      if (chunks.length) {
+        return NextResponse.json({
+          found: true,
+          document: {
+            id: file,
+            title: chunks[0].title,
+            shortTitle: chunks[0].title,
+            type: chunks[0].category,
+            number: chunks[0].category,
+            date: "",
+            authority: "",
+            status: "",
+            summary: "",
+            domaines: [],
+            sanctions: [],
+            obligations: [],
+            pdfFile: file,
+            pages: Math.max(...chunks.map((c) => c.page)),
+          },
+          articles: [],
+        });
+      }
     }
 
     // 2. Search articles by query keyword

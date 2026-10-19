@@ -52,6 +52,9 @@ type Citation = {
   page: number;
   excerpt: string;
   file: string;
+  articles?: string[];
+  isRecueil?: boolean;
+  legalTitle?: string | null;
 };
 
 type Message = {
@@ -717,7 +720,7 @@ export default function Home() {
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`} aria-label="Menu principal et historique">
         <div className="sidebar-top">
           <div className="sidebar-brand-row">
-            <a className="brand" href="/" aria-label="Droit Cameroun, accueil">
+            <a className="brand" href="/" aria-label="Co-founder, accueil">
               <span className="brand-mark">
                 <Scale size={20} strokeWidth={2.1} />
               </span>
@@ -833,6 +836,11 @@ export default function Home() {
               </button>
             </div>
             <PwaInstallPrompt />
+            <nav className="sidebar-account-links" aria-label="Compte et offres">
+              <a href="/workspace"><Sparkles size={14} /> Co-fondateur IA</a>
+              <a href="/tarifs">Tarifs</a>
+              <a href="/compte">Compte</a>
+            </nav>
           </div>
 
           <div className="sidebar-note">
@@ -874,12 +882,16 @@ export default function Home() {
               e.preventDefault();
               setActiveTab("home");
             }}
-            aria-label="Accueil Droit.cm"
+            aria-label="Accueil Co-founder"
           >
-            <span>droit</span>.cm
+            Co-<span>founder</span>
             <span className="status-dot" title="Assistant en ligne" />
           </a>
 
+          <div className="topbar-right">
+          <a className="workspace-link" href="/workspace" title="Co-fondateur IA : agent, emails, fournisseurs, démarches (offre payante)">
+            <Sparkles size={15} /> <span>Co-fondateur IA</span>
+          </a>
           <button
             className="topbar-nav-btn"
             type="button"
@@ -889,6 +901,7 @@ export default function Home() {
           >
             <Plus size={22} strokeWidth={2} />
           </button>
+          </div>
         </header>
 
         {/* Tab 2: Diagnostic de conformité & Recherche de lois */}
@@ -1003,7 +1016,7 @@ export default function Home() {
                   )}
                   <div className="message-content">
                     <div className="message-author">
-                      {message.role === "user" ? "Vous" : "Droit.cm"}
+                      {message.role === "user" ? "Vous" : "Co-founder"}
                       {message.role === "assistant" && (
                         <span className="answer-source-label">
                           <Sparkles size={12} /> Réponse documentée
@@ -1039,8 +1052,19 @@ export default function Home() {
                             >
                               <span className="source-file-icon"><FileText size={16} /></span>
                               <span className="source-copy">
-                                <strong>{citation.title}</strong>
-                                <small>{citation.category} · page {citation.page}</small>
+                                <span className="source-type-label">
+                                  {citation.isRecueil ? "Extrait d’un recueil" : citation.category}
+                                </span>
+                                <strong>{citation.legalTitle ?? citation.title}</strong>
+                                {citation.isRecueil && citation.legalTitle && (
+                                  <small>Recueil source : {citation.title}</small>
+                                )}
+                                <small>
+                                  Page PDF {citation.page}
+                                  {citation.articles && citation.articles.length > 0
+                                    ? ` · Article${citation.articles.length > 1 ? "s" : ""} ${citation.articles.join(", ")}`
+                                    : ""}
+                                </small>
                               </span>
                               <ExternalLink size={14} className="source-external" />
                             </div>
@@ -1079,7 +1103,7 @@ export default function Home() {
                   <span className="message-avatar"><Scale size={16} /></span>
                   <div className="message-content">
                     <div className="message-author">
-                      Droit.cm <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
+                      Co-founder <span className="answer-source-label"><Sparkles size={12} /> Analyse des textes en cours</span>
                     </div>
                     <div className="typing-indicator"><span /><span /><span /></div>
                   </div>

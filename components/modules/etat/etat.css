@@ -1,0 +1,28 @@
+/* Module État (niveau 3) — styles propres au module. */
+.etat-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--amber-soft, rgba(245, 158, 11, .12)); border: 1px solid var(--amber, #d97706); color: var(--text-primary, inherit); font-size: 13px; }
+.etat-banner svg { color: var(--amber, #d97706); }
+.etat-banner span { color: var(--text-secondary, inherit); }
+.etat-subtabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.etat-subtabs button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 13px; }
+.etat-subtabs button.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.etat-kpi strong { font-size: 24px; }
+.etat-kpi small { color: var(--text-muted); }
+.etat-spark { width: 100%; height: 34px; display: block; margin: 6px 0; }
+.etat-spark polyline { stroke: var(--accent); }
+.etat-spark.is-rose polyline { stroke: var(--rose, #e11d48); }
+.etat-spark.is-green polyline { stroke: var(--green, #16a34a); }
+.etat-bar { display: inline-block; width: 80px; height: 7px; border-radius: 99px; background: var(--bg-glass-strong); overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.etat-bar div { height: 100%; border-radius: 99px; }
+.etat-bar .is-pos { background: var(--green, #16a34a); }
+.etat-bar .is-neg { background: var(--rose, #e11d48); }
+.etat-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.etat-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.etat-cols h4, .etat-root h4 { margin: 12px 0 6px; font-size: 13px; }
+.etat-segment { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+.etat-segment summary { cursor: pointer; font-size: 13px; }
+.etat-news { padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.etat-news:last-child { border-bottom: 0; }
+.etat-line { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
+.etat-hyp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.etat-hyp label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+@media (max-width: 1000px) { .etat-cols, .etat-hyp { grid-template-columns: 1fr; } }

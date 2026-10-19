@@ -1,0 +1,63 @@
+/* Module « memoire » — styles propres (préfixes mem- et lite-). */
+.mem { display: grid; gap: 16px; }
+.mem-ask { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.mem-ask input, .mem-grow { flex: 1; min-width: 0; }
+.mem-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mem-chip { border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary, inherit); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.mem-answer, .mem-analysis { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-secondary, transparent); }
+.mem-answer-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mem-answer-head h4 { margin: 0; }
+.mem-hits { list-style: none; padding: 0; display: grid; gap: 6px; }
+.mem-legal { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg-tertiary); border-radius: 6px; font-size: 13px; }
+.mem-legal-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mem-legal ul { margin: 6px 0 0; padding-left: 18px; }
+.mem-legal blockquote { margin: 4px 0; font-size: 12.5px; opacity: .85; }
+.mem-decisions { display: grid; gap: 12px; }
+.mem-decision { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.mem-decision h4 { margin: 0 0 4px; }
+.mem-decision p { margin: 6px 0; }
+.mem-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.mem-filter { max-width: 160px; }
+.mem-form { display: grid; gap: 8px; padding: 10px; margin-bottom: 12px; border: 1px dashed var(--border); border-radius: 10px; }
+.mem textarea, .mem input:not([type="checkbox"]), .mem select { font: inherit; }
+.mem textarea { width: 100%; }
+.mem-participants label { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+.mem-voice { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.mem-split { display: grid; grid-template-columns: minmax(220px, 1fr) 2.2fr; gap: 16px; }
+@media (max-width: 900px) { .mem-split { grid-template-columns: 1fr; } }
+.mem-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mem-list button { all: unset; cursor: pointer; display: grid; gap: 2px; padding: 8px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+.mem-list li.is-active button, .mem-list button:hover { background: var(--bg-tertiary); }
+.mem-transcript { white-space: pre-wrap; font-size: 12.5px; max-height: 260px; overflow: auto; background: var(--bg-tertiary); padding: 8px; border-radius: 8px; }
+.mem-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mem-table td, .mem-table th { border-bottom: 1px solid var(--border); padding: 6px 4px; text-align: left; vertical-align: top; }
+.mem-warn { background: rgba(245, 158, 11, .12); border: 1px solid rgba(245, 158, 11, .5); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+.mem-missed input { width: 110px; }
+.mem-score { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.mem-score-big { font-size: 56px; font-weight: 800; line-height: 1; }
+.mem-score-big small { font-size: 18px; opacity: .7; }
+.mem-bar { position: relative; height: 16px; background: var(--bg-tertiary); border-radius: 8px; min-width: 120px; overflow: hidden; }
+.mem-bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: .55; }
+.mem-bar span { position: relative; font-size: 11px; padding-left: 6px; font-weight: 700; }
+.mem-toggle { display: inline-flex; gap: 6px; align-items: center; }
+
+/* Console bas débit (aussi utilisée par la page autonome). */
+.lite { display: grid; gap: 10px; font-size: 15px; }
+.lite textarea { width: 100%; font: inherit; padding: 8px; box-sizing: border-box; }
+.lite select { font: inherit; padding: 6px; }
+.lite-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.lite-actions button[type="submit"] { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.lite-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.lite-items li { border-top: 1px solid rgba(127, 127, 127, .3); padding-top: 8px; }
+.lite-q { font-weight: 700; margin: 0 0 4px; }
+.lite-muted { opacity: .7; font-size: 13px; margin: 2px 0; }
+.lite-err { color: #dc2626; }
+.lite-status { font-size: 13px; margin: 0; }
+.lite-brief { margin: 0; }
+
+/* Interface allégée : aucune image ni animation, ombres et dégradés supprimés. */
+html[data-lite="1"] img, html[data-lite="1"] video, html[data-lite="1"] picture { display: none !important; }
+html[data-lite="1"] *, html[data-lite="1"] *::before, html[data-lite="1"] *::after { animation: none !important; transition: none !important; box-shadow: none !important; background-image: none !important; backdrop-filter: none !important; }
+.mem-list .ws-badge { justify-self: start; }
+.mem .ws-link { white-space: nowrap; }
+.lite a, .lite-page a { color: inherit; text-decoration: underline; }

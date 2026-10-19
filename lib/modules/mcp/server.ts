@@ -1,7 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { TOOL_MAP, type ToolContext } from "@/lib/agent/tools";
+import { TOOL_MAP, type ToolContext } from "@/lib/agent/registry";
 import { decideApproval, log, WorkspaceError } from "@/lib/workspace/service";
 import { randomToken, sha256 } from "./crypto";
 import { mcpOf, newId, nowIso, readMcp, withData } from "./repo";
@@ -24,8 +24,8 @@ const PUBLISHED: Record<string, Scope> = {
   veille_reglementaire: "lecture",
   lister_fournisseurs: "lecture",
   suivre_devis: "lecture",
-  boite_unifiee: "lecture",
-  lister_connecteurs: "lecture",
+  connecteurs_boite_unifiee: "lecture",
+  connecteurs_lister: "lecture",
   creer_tache: "ecriture",
   mettre_a_jour_demarche: "ecriture",
   calendrier_obligations: "ecriture",
@@ -35,7 +35,7 @@ const PUBLISHED: Record<string, Scope> = {
   rediger_email: "ecriture",
   demander_devis: "ecriture",
   relancer_fournisseur: "ecriture",
-  preparer_reponse: "ecriture",
+  connecteurs_preparer_reponse: "ecriture",
 };
 
 const EXTRA_TOOLS = [

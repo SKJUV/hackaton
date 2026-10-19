@@ -1,18 +1,26 @@
 import { newId, nowIso, readData, withData } from "@/lib/workspace/store";
 import { WorkspaceError } from "@/lib/workspace/service";
 import type { WorkspaceData } from "@/lib/workspace/types";
+import { moduleState } from "@/lib/modules/state";
 import { openBag, sealBag } from "./crypto";
 import type { CallStatus, Connection, ConnectorCall, McpData, SecretBag } from "./types";
 
-/** Données du module dans le store JSON existant (champ optionnel `mcp`, migration implicite). */
+/** Seed : collections vides ; la boîte unifiée d'exemple est créée à la demande pour les entreprises de démo (inbox.ts). */
+const seedMcp = () => ({ connections: [], calls: [], oauthPending: [], inbox: [], serverTokens: [], actions: [] }) as Record<string, unknown[]>;
+
+/** Identifiant du module (onglet « connecteurs », état `data.modules.connecteurs`, type d'approbation `connecteurs_action`). */
+export const MODULE_ID = "connecteurs";
+export const APPROVAL_TYPE = "connecteurs_action";
+
+/** Données du module via moduleState (convention : on ne touche pas au type WorkspaceData). Seed : boîte unifiée d'exemple. */
 export function mcpOf(data: WorkspaceData): McpData {
-  data.mcp ??= { connections: [], calls: [], oauthPending: [], inbox: [], serverTokens: [] };
-  const m = data.mcp;
+  const m = moduleState(data, MODULE_ID, seedMcp) as unknown as McpData;
   m.connections ??= [];
   m.calls ??= [];
   m.oauthPending ??= [];
   m.inbox ??= [];
   m.serverTokens ??= [];
+  m.actions ??= [];
   return m;
 }
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useTempDb } from "./setup-db";
 import { detectIntents, extractNeed, extractPurpose } from "@/lib/agent/demo-planner";
 import { runAgent } from "@/lib/agent/runner";
-import { TOOLS } from "@/lib/agent/tools";
+import { ALL_TOOLS as TOOLS } from "@/lib/agent/registry";
 import { getSnapshot } from "@/lib/workspace/service";
 
 describe("agent", () => {

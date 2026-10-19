@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 /** URI de redirection OAuth UNIQUE : {APP_URL}/api/mcp/oauth/callback */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const back = (q: string) => NextResponse.redirect(`${baseUrlFrom(request)}/workspace?onglet=connecteurs&${q}`, 302);
+  const back = (q: string) => NextResponse.redirect(`${baseUrlFrom(request)}/workspace?${q}#connecteurs`, 302);
   try {
     const user = await currentUser();
     const data = await readData();

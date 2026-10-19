@@ -1,3 +1,4 @@
+import { attachLegalCheck } from "@/lib/workspace/legal-check";
 import { log, WorkspaceError } from "@/lib/workspace/service";
 import { catalogEntry, catalogStatus } from "./catalog";
 import { callMcpTool, discoverTools, isUnauthorized, openMcp } from "./client";
@@ -6,7 +7,7 @@ import { keyStatus, openBag, sealBag } from "./crypto";
 import { ConnectorHttpError } from "./native/http";
 import { refreshTokens } from "./native/oauth";
 import { fetchAccount, NATIVE_TOOLS, type NativeCtx } from "./native/providers";
-import { getConnection, mcpOf, newId, nowIso, pushCall, readMcp, redact, setCallStatus, updateConnection, withData } from "./repo";
+import { APPROVAL_TYPE, getConnection, mcpOf, MODULE_ID, newId, nowIso, pushCall, readMcp, redact, setCallStatus, updateConnection, withData } from "./repo";
 import type { AuthMode, CachedTool, CallStatus, Connection, ConnectorAction, McpTransport, SecretBag } from "./types";
 
 /* ============================================================ Création / gestion */
@@ -284,25 +285,31 @@ export async function invokeConnectorTool(
   if (!tool.enabled) throw new WorkspaceError(`L'outil « ${toolName} » est désactivé.`, 409);
 
   if (tool.write) {
-    return withData((data) => {
-      const action: ConnectorAction = { connectionId, connectionName: conn.name, tool: toolName, args, sends: Boolean(tool.sends), inboxMessageId: opts.inboxMessageId };
+    const res = await withData((data) => {
+      const approvalId = newId("apr");
+      const action: ConnectorAction = { id: approvalId, companyId, connectionId, connectionName: conn.name, tool: toolName, args, sends: Boolean(tool.sends), inboxMessageId: opts.inboxMessageId };
+      const mode = tool.sends ? (connectorSendMode() === "live" ? "Envoi RÉEL à un tiers" : "Envoi à un tiers (simulation, rien ne part)") : "Écriture";
       const approval = {
-        id: newId("apr"),
+        id: approvalId,
         companyId,
-        type: "action_connecteur" as const,
+        type: APPROVAL_TYPE,
+        module: MODULE_ID,
         title: opts.title ?? `${conn.name} : ${tool.title ?? toolName}`,
-        summary: `${tool.sends ? (connectorSendMode() === "live" ? "Envoi RÉEL à un tiers" : "Envoi à un tiers (simulation)") : "Écriture"} via ${conn.kind === "mcp" ? "MCP" : "API"}${conn.demo ? " — DÉMO" : ""} — ${previewOf(redact(args)).slice(0, 300)}`,
+        summary: `${mode} via ${conn.kind === "mcp" ? "MCP" : "API officielle"}${conn.demo ? " — DÉMO (données fictives)" : ""}\nConnecteur : ${conn.name}\nOutil : ${toolName}\n${JSON.stringify(redact(args), null, 2).slice(0, 2500)}`,
         emailId: "",
         status: "en_attente" as const,
         requestedBy: actor,
         createdAt: nowIso(),
-        action,
       };
       data.approvals.push(approval);
+      mcpOf(data).actions.push(action);
       pushCall(data, { companyId, connectionId, connectionName: conn.name, tool: toolName, args, write: true, status: "en_attente_approbation", approvalId: approval.id, actor });
       log(data, companyId, actor, "approbation.demande", `${approval.title} — en attente de validation humaine.`);
       return { pending: true as const, approvalId: approval.id, summary: `« ${toolName} » (${conn.name}) en attente d'approbation` };
     });
+    // Feu vert juridique (informatif, ne bloque jamais) affiché dans la carte d'approbation.
+    await attachLegalCheck([res.approvalId], legalQueryOf(toolName, args));
+    return res;
   }
 
   const started = Date.now();
@@ -325,11 +332,25 @@ export async function invokeConnectorTool(
   }
 }
 
-/** Décision sur une approbation « action_connecteur » (appelée par decideApproval). */
+/** Requête du feu vert juridique : textes des arguments (objet, corps, message…). */
+function legalQueryOf(tool: string, args: Record<string, unknown>) {
+  const texts: string[] = [];
+  const walk = (v: unknown, depth: number) => {
+    if (depth > 3 || texts.join(" ").length > 400) return;
+    if (typeof v === "string" && !/^[\w.+-]+@[\w.-]+$/.test(v) && !/^\+?\d[\d\s]+$/.test(v)) texts.push(v);
+    else if (Array.isArray(v)) v.forEach((x) => walk(x, depth + 1));
+    else if (v && typeof v === "object") Object.values(v).forEach((x) => walk(x, depth + 1));
+  };
+  walk(args, 0);
+  return `${tool.replace(/_/g, " ")} ${texts.join(" ")}`.slice(0, 400);
+}
+
+/** Décision sur une approbation « connecteurs_action » (appelée par decideApproval). */
 export async function decideConnectorApproval(approvalId: string, decision: "approuver" | "rejeter", decidedBy: string, note?: string) {
   const pending = await withData((data) => {
     const approval = data.approvals.find((a) => a.id === approvalId);
-    if (!approval || !approval.action) throw new WorkspaceError("Approbation introuvable.", 404);
+    const action = mcpOf(data).actions.find((x) => x.id === approvalId);
+    if (!approval || !action) throw new WorkspaceError("Approbation introuvable.", 404);
     if (approval.status !== "en_attente") throw new WorkspaceError("Cette demande a déjà été traitée.", 409);
     approval.status = decision === "approuver" ? "approuvee" : "rejetee";
     approval.decidedBy = decidedBy;
@@ -341,7 +362,7 @@ export async function decideConnectorApproval(approvalId: string, decision: "app
       return null;
     }
     log(data, approval.companyId, decidedBy, "approbation.validation", `${approval.title} validé.`);
-    return { companyId: approval.companyId, action: approval.action };
+    return { companyId: approval.companyId, action: { ...action } };
   });
   if (!pending) return { status: "rejetee" as const };
 

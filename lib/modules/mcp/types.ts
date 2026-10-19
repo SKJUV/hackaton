@@ -134,13 +134,15 @@ export type McpServerToken = {
   revokedAt?: string;
 };
 
+/** Action exécutée à la validation d'une approbation de type « connecteurs_action » (id = id de l'approbation). */
+export type ConnectorAction = { id: string; companyId: string; connectionId: string; connectionName: string; tool: string; args: Record<string, unknown>; sends: boolean; inboxMessageId?: string };
+
+/** Collections du module dans `data.modules.connecteurs` (voir lib/modules/state.ts). Chaque élément porte `companyId`. */
 export type McpData = {
   connections: Connection[];
   calls: ConnectorCall[];
   oauthPending: OAuthPending[];
   inbox: InboxMessage[];
   serverTokens: McpServerToken[];
+  actions: ConnectorAction[];
 };
-
-/** Action exécutée à la validation d'une approbation de type « action_connecteur ». */
-export type ConnectorAction = { connectionId: string; connectionName: string; tool: string; args: Record<string, unknown>; sends: boolean; inboxMessageId?: string };

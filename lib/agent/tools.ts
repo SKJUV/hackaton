@@ -22,7 +22,6 @@ import {
   updateChecklistStep,
 } from "@/lib/workspace/service";
 import type { StepStatus } from "@/lib/workspace/types";
-import { MCP_AGENT_TOOLS } from "@/lib/modules/mcp/agent-tools";
 
 export type ToolContext = { companyId: string; citations: Citation[]; groundings?: Grounding[]; /** Outils découverts dynamiquement (connecteurs MCP / natifs). */ extraTools?: AgentTool[] };
 export type ToolResult = { summary: string; data: unknown };
@@ -341,7 +340,6 @@ export const TOOLS: AgentTool[] = [
       };
     },
   },
-  ...MCP_AGENT_TOOLS,
 ];
 
 export const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));

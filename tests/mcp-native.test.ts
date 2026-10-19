@@ -11,7 +11,7 @@ import { readMcp, updateConnection } from "@/lib/modules/mcp/repo";
 import { openBag, sealBag } from "@/lib/modules/mcp/crypto";
 import { verifyWhatsAppSignature, whatsappVerifyChallenge } from "@/lib/modules/mcp/webhooks";
 import { connectorAgentTools } from "@/lib/modules/mcp/agent-tools";
-import { TOOL_MAP } from "@/lib/agent/tools";
+import { TOOL_MAP } from "@/lib/agent/registry";
 import { runAgent } from "@/lib/agent/runner";
 
 const CO = "co_kmerlog";
@@ -181,20 +181,24 @@ describe("connecteurs natifs (API officielles, mocks HTTP)", () => {
     const email = inbox.messages.find((m) => m.category === "candidature")!;
     const r1 = await prepareReply(email.id, { routine: "refus_candidature" }, "Freddy");
     let snap = await getSnapshot(CO);
-    expect(snap.approvals.find((a) => a.id === r1.approvalId)?.type).toBe("envoi_email");
+    expect(snap.approvals.find((a) => a.id === r1.approvalId)?.type).toBe("connecteurs_reponse");
+    expect(snap.approvals.find((a) => a.id === r1.approvalId)?.legalCheck).toBeTruthy();
     const wa = inbox.messages.find((m) => m.channel === "whatsapp")!;
     const r2 = await prepareReply(wa.id, {}, "Freddy");
     snap = await getSnapshot(CO);
     const appr = snap.approvals.find((a) => a.id === r2.approvalId)!;
-    expect(appr.type).toBe("action_connecteur");
-    expect(appr.action?.tool).toBe("whatsapp_envoyer_texte");
+    expect(appr.type).toBe("connecteurs_action");
+    expect(appr.module).toBe("connecteurs");
+    expect(appr.legalCheck?.status).toBeTruthy();
+    expect(JSON.parse(readFileSync(process.env.WORKSPACE_DB_PATH ?? "", "utf8")).modules.connecteurs.actions.length).toBeGreaterThan(0);
+    expect(appr.summary).toContain("whatsapp_envoyer_texte");
     expect(await decideApproval(appr.id, "approuver", "Freddy")).toMatchObject({ callStatus: "demo" });
   });
 
   it("agent : outils du module enregistrés, agent démo inchangé et fonctionnel", async () => {
     mockNetwork([]);
-    for (const name of ["lister_connecteurs", "boite_unifiee", "synchroniser_boite", "preparer_reponse"]) expect(TOOL_MAP.has(name)).toBe(true);
-    const r = await TOOL_MAP.get("boite_unifiee")!.run({}, { companyId: CO, citations: [] });
+    for (const name of ["connecteurs_lister", "connecteurs_boite_unifiee", "connecteurs_synchroniser_boite", "connecteurs_preparer_reponse"]) expect(TOOL_MAP.has(name)).toBe(true);
+    const r = await TOOL_MAP.get("connecteurs_boite_unifiee")!.run({}, { companyId: CO, citations: [] });
     expect(r.summary).toMatch(/DÉMO/);
     const snap = await getSnapshot(CO);
     const reply = await runAgent(snap.company, [{ role: "user", content: "Fais-moi le briefing du jour" }]);
@@ -211,10 +215,10 @@ describe("connecteurs natifs (API officielles, mocks HTTP)", () => {
 
 describe("planificateur démo — boîte unifiée", () => {
   beforeEach(useTempDb);
-  it("« mes messages reçus » → outil boite_unifiee", async () => {
+  it("« mes messages reçus » → outil connecteurs_boite_unifiee", async () => {
     const snap = await getSnapshot(CO);
     const reply = await runAgent(snap.company, [{ role: "user", content: "Montre-moi les messages reçus dans la boîte unifiée" }]);
-    expect(reply.toolTrace.some((t) => t.tool === "boite_unifiee")).toBe(true);
-    expect(reply.answer).toContain("Boîte unifiée");
+    expect(reply.toolTrace.some((t) => t.tool === "connecteurs_boite_unifiee")).toBe(true);
+    expect(reply.answer).toContain("Communications");
   });
 });

@@ -21,7 +21,7 @@ const ROUTINES: Record<string, string> = {
 };
 const PRIO = { haute: "rose", normale: "amber", basse: "neutral" } as const;
 
-export function InboxTab({ snap, notify, refresh, goTo }: TabProps) {
+export default function CommsPanel({ snap, notify, refresh, goTo }: TabProps) {
   const companyId = snap.company.id;
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [selected, setSelected] = useState<string | null>(null);

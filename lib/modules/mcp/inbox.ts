@@ -1,4 +1,5 @@
-import { draftEmail, log, WorkspaceError } from "@/lib/workspace/service";
+import { proposeExternalMessage } from "@/lib/workspace/actions";
+import { log, WorkspaceError } from "@/lib/workspace/service";
 import type { Company } from "@/lib/workspace/types";
 import { createConnection, executeTool, invokeConnectorTool } from "./connectors";
 import type { MailSummary } from "./native/providers";
@@ -305,7 +306,7 @@ export async function prepareReply(messageId: string, input: { corps?: string; r
     const r = await invokeConnectorTool(msg.companyId, wa.id, "whatsapp_envoyer_texte", { a: msg.from, texte: body }, actor, { inboxMessageId: msg.id, title });
     approvalId = (r as { approvalId: string }).approvalId;
   } else {
-    const { approval } = await draftEmail(msg.companyId, { to: [msg.from], subject, body }, actor);
+    const { approval } = await proposeExternalMessage(msg.companyId, { module: "connecteurs", type: "connecteurs_reponse", title, summary: `Réponse à ${msg.fromName ?? msg.from}`, channel: "email", to: [msg.from], subject, body }, actor);
     approvalId = approval.id;
   }
   await withData((d) => {

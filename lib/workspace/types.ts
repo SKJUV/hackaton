@@ -105,9 +105,12 @@ export type QuoteRequest = {
 };
 
 export type EmailStatus = "brouillon" | "en_attente_approbation" | "envoye" | "simule" | "echec" | "rejete";
+/** Canal de l'action externe. Hors email, l'envoi est toujours simulé tant qu'un connecteur réel n'est pas branché. */
+export type MessageChannel = "email" | "whatsapp" | "sms" | (string & {});
 export type Email = {
   id: string;
   companyId: string;
+  channel?: MessageChannel;
   to: string[];
   cc?: string[];
   subject: string;
@@ -116,14 +119,24 @@ export type Email = {
   provider?: string;
   providerMessageId?: string;
   error?: string;
-  relatedType?: "devis" | "relance" | "libre";
+  relatedType?: "devis" | "relance" | "libre" | (string & {});
   relatedId?: string;
   createdBy: string;
   createdAt: string;
   sentAt?: string;
 };
 
-export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur" | "action_connecteur";
+/** Types d'approbation : les modules peuvent en ajouter (chaîne libre, préfixée par le module, ex. "fund_relance"). */
+export type ApprovalType = "envoi_email" | "demande_devis" | "relance_fournisseur" | (string & {});
+
+/** Feu vert juridique : vérification de l'action externe contre le corpus officiel, affichée dans la carte d'approbation. */
+export type LegalCheck = {
+  status: "fonde" | "partiel" | "non_couvert";
+  label: string;
+  query: string;
+  sources: { id: string; document: string; page: number; articles: string[]; file: string; isExample: boolean }[];
+  checkedAt: string;
+};
 export type ApprovalStatus = "en_attente" | "approuvee" | "rejetee";
 export type Approval = {
   id: string;
@@ -138,9 +151,11 @@ export type Approval = {
   decidedBy?: string;
   decisionNote?: string;
   decidedAt?: string;
+  /** Module à l'origine de l'action (absent = cœur). */
+  module?: string;
+  /** Feu vert juridique (calculé après création, voir lib/workspace/actions.ts). */
+  legalCheck?: LegalCheck;
   createdAt: string;
-  /** Module mcp : appel d'outil externe (MCP ou API native) exécuté à la validation (emailId vide). */
-  action?: import("@/lib/modules/mcp/types").ConnectorAction;
 };
 
 export type ActivityEntry = {
@@ -278,6 +293,9 @@ export type WorkspaceData = {
   loginCodes: LoginCode[];
   systemEmails: SystemEmail[];
   subscriptions: Subscription[];
-  /** Module mcp-connecteurs (connecteurs, journal d'appels, boîte unifiée, jetons du serveur MCP). */
-  mcp?: import("@/lib/modules/mcp/types").McpData;
+  /** Données des modules (une clé par module, voir lib/modules/state.ts). */
+  modules?: Record<string, ModuleState>;
 };
+
+/** État d'un module : collections libres ; `__seeded` indique si le seed démo a été appliqué. */
+export type ModuleState = { __seeded?: boolean } & Record<string, unknown>;

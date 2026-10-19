@@ -29,7 +29,7 @@ const STATUS: Record<string, { label: string; tone: "green" | "amber" | "rose" |
 };
 const CALL: Record<string, "green" | "amber" | "rose" | "violet" | "neutral"> = { succes: "green", simule: "violet", demo: "amber", erreur: "rose", en_attente_approbation: "amber", rejete: "neutral" };
 
-export function ConnectorsTab({ snap, memberId, notify, refresh }: TabProps) {
+export default function ConnectorsPanel({ snap, memberId, notify, refresh }: TabProps) {
   const companyId = snap.company.id;
   const [data, setData] = useState<{ catalog: Entry[]; connections: Conn[]; settings: Settings } | null>(null);
   const [calls, setCalls] = useState<Call[]>([]);
@@ -59,7 +59,7 @@ export function ConnectorsTab({ snap, memberId, notify, refresh }: TabProps) {
     const o = q.get("oauth");
     if (o) {
       notify(o === "ok" ? "Compte connecté (OAuth) et testé" : o === "test_echoue" ? "Autorisé, mais le test a échoué" : `OAuth : ${q.get("message") ?? "erreur"}`, o === "ok" ? "success" : "error");
-      window.history.replaceState(null, "", "/workspace");
+      window.history.replaceState(null, "", "/workspace#connecteurs");
     }
   }, [load, notify]);
 

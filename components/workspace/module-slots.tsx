@@ -21,4 +21,8 @@ export const MODULE_SLOTS: Record<string, ComponentType<TabProps>> = {
   team: load(() => import("@/components/modules/team/TeamPanel")),
   mentor: load(() => import("@/components/modules/mentor/MentorPanel")),
   market: load(() => import("@/components/modules/market/MarketPanel")),
+  macro: load(() => import("@/components/modules/macro/MacroPanel")),
+  crise: load(() => import("@/components/modules/crise/CrisePanel")),
+  citizen: load(() => import("@/components/modules/citizen/CitizenPanel")),
+  policy: load(() => import("@/components/modules/policy/PolicyPanel")),
 };
